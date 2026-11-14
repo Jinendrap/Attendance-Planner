@@ -46,7 +46,7 @@ export default function ImportScreen({ session, semester, calendarName, onDone, 
         setCalendars(list)
         const match = list.find((c) => c.name.trim().toLowerCase() === wanted)
           || list.find((c) => c.name.toLowerCase().includes(wanted))
-        setCalendarId(match ? match.id : list[0]?.id || '')
+        setCalendarId(match ? match.id : '') // no match: let the person choose
         setStep('pick')
       })
       .catch(fail)
@@ -177,6 +177,7 @@ export default function ImportScreen({ session, semester, calendarName, onDone, 
         <h2>Choose your timetable calendar</h2>
         <p>Classes from {semester.start_date} to {semester.end_date} will be read.</p>
         <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
+          {!calendarId && <option value="">Choose a calendar…</option>}
           {calendars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {msg && <p className="error">{msg}</p>}
