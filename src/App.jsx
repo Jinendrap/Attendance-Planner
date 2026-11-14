@@ -17,7 +17,7 @@ import GettingStarted from './GettingStarted.jsx'
 import { clearOfflineData, onSwMessage, syncPush } from './pwa.js'
 import { nowIST } from './dateUtils.js'
 import { attOf } from './calendarLogic.js'
-import { BottomNav, LiveClock, NavMenu, Roll, ThemeToggle, useTheme } from './Shell.jsx'
+import { BottomNav, FidgetButton, LiveClock, NavMenu, Roll, ThemeToggle, useTheme } from './Shell.jsx'
 import { fetchPending, flushQueue, markSessions, withQueue } from './attendance.js'
 
 export default function App() {
@@ -33,12 +33,14 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine)
   const [markJob, setMarkJob] = useState(null) // a Present/Absent tap from a notification
   const [menuOpen, setMenuOpen] = useState(false)
+  const [fidget, setFidget] = useState(false)
   const [firstDefaults, setFirstDefaults] = useState(null)
   const [hasSubjects, setHasSubjects] = useState(null) // null = not known yet
   const [profile, setProfile] = useState(undefined) // undefined = loading, null = first sign-in, object = ready
   const [theme, toggleTheme] = useTheme()
   const [intro, setIntro] = useState(() => { try { return !sessionStorage.getItem('cap_intro') } catch { return true } })
   useBackClose(menuOpen, () => setMenuOpen(false))
+  useBackClose(fidget, () => setFidget(false))
   const userId = session?.user?.id
 
   useEffect(() => {
@@ -306,6 +308,7 @@ export default function App() {
         <Logo size={32} />
         <strong className="brand"><span className="brand-long">College Attendance Planner</span><span className="brand-short">Attendance</span></strong>
         <LiveClock />
+        <FidgetButton onClick={() => setFidget(true)} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
       {error && <p className="error">{error}</p>}
@@ -343,6 +346,7 @@ export default function App() {
       {semester && view !== 'import' && <BottomNav view={view} onGo={go} onMore={() => setMenuOpen(true)} pendingCount={pendingCount} />}
       {menuOpen && <NavMenu items={tabs} view={view} onGo={go} onClose={() => setMenuOpen(false)} />}
       {intro && <IdIntro profile={profile} onDone={endIntro} />}
+      {fidget && !intro && <IdIntro fidget profile={profile} onDone={() => setFidget(false)} />}
     </div>
   )
 }

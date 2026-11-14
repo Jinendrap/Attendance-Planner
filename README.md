@@ -9,6 +9,20 @@ Anyone can sign in with Google and gets their own private planner.
 |---|---|---|
 | ![Overview](docs/screenshots/overview.png) | ![Calendar](docs/screenshots/calendar.png) | ![Attendance](docs/screenshots/attendance.png) |
 
+**On a computer**
+
+| Overview | Calendar |
+|---|---|
+| ![Overview on desktop](docs/screenshots/desktop-overview.png) | ![Calendar on desktop](docs/screenshots/desktop-calendar.png) |
+
+| Attendance | Tasks |
+|---|---|
+| ![Attendance on desktop](docs/screenshots/desktop-attendance.png) | ![Tasks on desktop](docs/screenshots/desktop-tasks.png) |
+
+| Dark theme | Fidget ID card |
+|---|---|
+| ![Dark theme on desktop](docs/screenshots/desktop-overview-dark.png) | ![Fidget ID card on desktop](docs/screenshots/desktop-fidget.png) |
+
 ## Features
 - Day / week / month calendar with subject colours
 - One-way, read-only import of a Google Calendar timetable (no duplicates), or add classes by hand
@@ -18,6 +32,7 @@ Anyone can sign in with Google and gets their own private planner.
 - Class remarks, tasks and deadlines, CSV export
 - Installable on Android as an app, works offline for reading, class reminders
 - Light and dark theme
+- A fidget ID card: tap the small ID button in the header to play with it (close with Close, Esc or a tap outside)
 - Each person has their own data and can delete their account from Settings
 
 ## Tech stack

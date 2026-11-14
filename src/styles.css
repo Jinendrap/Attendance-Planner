@@ -403,7 +403,9 @@ button.absent:not(.blk) { background: var(--danger); color: #fff; }
 /* Accordion rows on the Attendance tab (template FAQ style) */
 .acc { background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-edge); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border-left: 6px solid var(--accent); }
 .acc-head { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 12px; align-items: center; width: 100%; text-align: left; background: transparent; color: var(--ink); padding: 16px 16px 12px; border-radius: 0; }
-.acc-head:hover { background: var(--field); }
+/* Keep the card header colours fixed: the global button hover rule must not recolour it (it stuck after a tap on phones). */
+button.acc-head:not(.tile), button.acc-head:not(.tile):active, button.acc-head:not(.tile):focus { background: transparent; color: var(--ink); }
+@media (hover: hover) { button.acc-head:not(.tile):hover { background: var(--field); color: var(--ink); } }
 .acc-head .nm { font-size: 1.15rem; font-weight: 600; letter-spacing: -.02em; }
 .acc-head .pct { font-size: 1.5rem; font-weight: 500; letter-spacing: -.03em; }
 .acc-head .plus { width: 28px; height: 28px; display: grid; place-items: center; font-size: 1.4rem; font-weight: 400; color: var(--muted); transition: transform .25s ease; }
@@ -437,6 +439,7 @@ tfoot .totalrow td { border-bottom: 0; }
 
 /* ---------- ID card intro ---------- */
 .idintro { position: fixed; inset: 0; z-index: 70; overflow: hidden; touch-action: none; background: color-mix(in srgb, var(--canvas) 55%, transparent); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); transition: opacity .35s ease, background-color .55s ease, backdrop-filter .55s ease, -webkit-backdrop-filter .55s ease; }
+.idintro.fidget { cursor: default; }
 .idintro.unlock { background-color: transparent; -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); }
 .idintro.out { opacity: 0; pointer-events: none; }
 .idlayer { position: absolute; inset: 0; pointer-events: none; }
@@ -478,7 +481,9 @@ tfoot .totalrow td { border-bottom: 0; }
   .page { padding: 8px 10px 24px; gap: 12px; }
   .page.has-bnav { padding-bottom: 104px; }
   .card, .panel { padding: 16px; border-radius: 20px; }
-  .topbar { padding-left: 14px; }
+  .topbar { padding: 6px 6px 6px 12px; gap: 6px; }
+  .topbar .iconbtn { width: 34px; height: 34px; }
+  .topbar .clock { font-size: .8rem; }
   .brand-long { display: none; }
   .clock-day { display: none; }
   .brand-short { display: inline; }

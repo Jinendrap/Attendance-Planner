@@ -19,7 +19,7 @@ const wallAt = (r) => Math.max(40, ((window.innerWidth / 2 - 40) * Math.max(r, L
 
 // A hanging ID card on a stretchy, bendy band. Grab it anywhere, pull it and let go:
 // the card flies away first, then the app un-blurs.
-export default function IdIntro({ profile, onDone }) {
+export default function IdIntro({ profile, onDone, fidget = false }) {
   const bandRef = useRef(null)
   const edgeRef = useRef(null)
   const stitchRef = useRef(null)
@@ -46,13 +46,19 @@ export default function IdIntro({ profile, onDone }) {
     if (st.done) return
     st.done = true
     setGone(true) // 1. the card and band whip away
+    if (fidget) { // fidget mode: close quickly
+      setTimeout(() => setUnlocked(true), 150)
+      setTimeout(() => setOut(true), 400)
+      setTimeout(onDone, 650)
+      return
+    }
     setTimeout(() => setUnlocked(true), 380) // 2. then the screen un-blurs
     setTimeout(() => setOut(true), 900)
     setTimeout(onDone, 1250)
   }
 
   useEffect(() => {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { onDone(); return undefined }
+    if (!fidget && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { onDone(); return undefined }
     const st = s.current
     let raf = 0
     let last = performance.now()
@@ -202,11 +208,15 @@ export default function IdIntro({ profile, onDone }) {
     const speed = Math.hypot(st.vx, st.vy)
     st.vx = clamp(st.vx, -2600, 2600)
     st.vy = clamp(st.vy, -2600, 2600)
+    if (fidget) return // fidget mode: keep playing until Close, Esc or a tap outside
     if (Math.hypot(st.x, st.y) - L > 40 || speed > 1400) trigger()
   }
 
+  // Fidget mode: tapping the blurred background closes it.
+  const outside = (e) => { if (fidget && e.target === e.currentTarget) trigger() }
+
   return (
-    <div className={`idintro ${unlocked ? 'unlock' : ''} ${gone ? 'gone' : ''} ${out ? 'out' : ''}`} role="dialog" aria-label="Welcome">
+    <div className={`idintro ${fidget ? 'fidget' : ''} ${unlocked ? 'unlock' : ''} ${gone ? 'gone' : ''} ${out ? 'out' : ''}`} role="dialog" aria-label={fidget ? 'Fidget ID card' : 'Welcome'} onPointerDown={outside}>
       <div className="idlayer">
         <svg className="idband" aria-hidden="true">
           <path ref={edgeRef} fill="none" stroke="rgba(0,0,0,.28)" strokeWidth={BAND_W + 3} strokeLinecap="butt" />
@@ -226,8 +236,8 @@ export default function IdIntro({ profile, onDone }) {
           <i className="idshine" aria-hidden="true" />
         </div>
       </div>
-      <p ref={hint} className="idhint"><span>↓</span> Pull the ID down and let go</p>
-      <button className="link idskip" onClick={trigger}>Skip</button>
+      <p ref={hint} className="idhint"><span>↓</span> {fidget ? 'Grab it, swing it, fling it' : 'Pull the ID down and let go'}</p>
+      <button className="link idskip" onClick={trigger}>{fidget ? 'Close' : 'Skip'}</button>
     </div>
   )
 }
