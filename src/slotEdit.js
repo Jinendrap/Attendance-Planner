@@ -46,7 +46,7 @@ import { weekdayOf, addDays } from './dateUtils.js'
 
 export function timeError(start, end) {
   const ok = (t) => /^\d{2}:\d{2}$/.test(t) && toMin(t) < 24 * 60
-  if (!ok(start) || !ok(end)) return 'Enter times like 08:30 (24-hour).'
+  if (!ok(start) || !ok(end)) return 'Pick a start and end time.'
   if (toMin(end) <= toMin(start)) return 'The end time must be after the start time.'
   return ''
 }

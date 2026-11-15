@@ -104,8 +104,8 @@ export function AddClassForm({ semester, subjects, userId, onDone, onCancel }) {
             {WEEK_ORDER.map((d) => <option key={d} value={d}>{DAYS[d]}</option>)}
           </select>
         </label>
-        <label>Start (24h)<input type="text" inputMode="numeric" placeholder="08:30" value={f.start} onChange={set('start')} /></label>
-        <label>End (24h)<input type="text" inputMode="numeric" placeholder="09:30" value={f.end} onChange={set('end')} /></label>
+        <label>Start<input type="time" value={f.start} onChange={set('start')} /></label>
+        <label>End<input type="time" value={f.end} onChange={set('end')} /></label>
         <label>Sessions<input type="number" min="1" max="6" value={f.sessions} onChange={set('sessions')} /></label>
         <label>Room<input type="text" value={f.room} onChange={set('room')} /></label>
         <label>Faculty<input type="text" value={f.faculty} onChange={set('faculty')} /></label>

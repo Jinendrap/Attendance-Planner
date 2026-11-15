@@ -86,7 +86,7 @@ export default function Home({ semester, userId, onImport }) {
     const slot = slots.find((x) => x.id === f.id)
     const n = Number(f.sessions)
     const okTime = (t) => /^\d{2}:\d{2}$/.test(t) && toMin(t) < 24 * 60
-    if (!okTime(f.start) || !okTime(f.end)) { setEditError('Enter times like 08:30 (24-hour).'); return }
+    if (!okTime(f.start) || !okTime(f.end)) { setEditError('Pick a start and end time.'); return }
     if (toMin(f.end) <= toMin(f.start)) { setEditError('The end time must be after the start time.'); return }
     if (!Number.isInteger(n) || n < 1 || n > 6) { setEditError('Sessions must be a whole number from 1 to 6.'); return }
     setBusy(true); setEditError('')
@@ -203,8 +203,8 @@ export default function Home({ semester, userId, onImport }) {
                   {editing?.id === x.id && (
                     <div className="editform">
                       <div className="formgrid">
-                        <label>Start (24h)<input type="text" inputMode="numeric" placeholder="08:30" value={editing.start} onChange={(e) => setEditing({ ...editing, start: e.target.value })} /></label>
-                        <label>End (24h)<input type="text" inputMode="numeric" placeholder="11:00" value={editing.end} onChange={(e) => setEditing({ ...editing, end: e.target.value })} /></label>
+                        <label>Start<input type="time" value={editing.start} onChange={(e) => setEditing({ ...editing, start: e.target.value })} /></label>
+                        <label>End<input type="time" value={editing.end} onChange={(e) => setEditing({ ...editing, end: e.target.value })} /></label>
                         <label>Sessions<input type="number" min="1" max="6" value={editing.sessions} onChange={(e) => setEditing({ ...editing, sessions: e.target.value })} /></label>
                         <label>Room<input type="text" value={editing.room} onChange={(e) => setEditing({ ...editing, room: e.target.value })} /></label>
                         <label>Faculty<input type="text" value={editing.faculty} onChange={(e) => setEditing({ ...editing, faculty: e.target.value })} /></label>
