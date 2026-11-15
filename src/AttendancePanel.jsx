@@ -76,7 +76,7 @@ export default function AttendancePanel({ list, onMark }) {
           <p className="muted">Or mark each session separately</p>
           {list.map((p, i) => (
             <div key={p.id} className="part">
-              <span>Session {p.part} · {p.start}–{p.end} · <em>{label(p.att)}</em></span>
+              <span>Session {i + 1} · {p.start}–{p.end} · <em>{label(p.att)}</em></span>
               {picking === p.id ? (
                 <ReasonPicker onPick={(r) => apply([p], 'absent', r)} onCancel={() => setPicking(null)} />
               ) : (

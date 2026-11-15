@@ -1,4 +1,5 @@
 import { toMin, toHHMM } from './dateUtils.js'
+import { groupKey } from './calendarLogic.js'
 
 // Works out how to change the dated sessions of one weekly slot after it was edited.
 // Existing sessions are updated in place (so cancelled status etc. is kept);
@@ -6,7 +7,7 @@ import { toMin, toHHMM } from './dateUtils.js'
 export function planResync(rows, vals) {
   const groups = new Map()
   for (const r of rows) {
-    const k = r.google_event_id || r.id
+    const k = groupKey(r)
     if (!groups.has(k)) groups.set(k, [])
     groups.get(k).push(r)
   }

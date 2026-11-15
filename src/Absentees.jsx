@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabaseClient.js'
 import { hhmm } from './config.js'
 import { fmt, toMin } from './dateUtils.js'
+import { groupKey } from './calendarLogic.js'
 
 const dur = (min) => {
   const h = Math.floor(min / 60)
@@ -18,7 +19,7 @@ export default function Absentees({ semester, version }) {
   useEffect(() => {
     let off = false
     supabase.from('sessions')
-      .select('id, session_date, start_time, end_time, google_event_id, subjects(name, colour), attendance!inner(status, reason)')
+      .select('id, session_date, start_time, end_time, google_event_id, slot_id, subjects(name, colour, id), subject_id, attendance!inner(status, reason)')
       .eq('semester_id', semester.id).eq('attendance.status', 'absent')
       .order('session_date', { ascending: false }).order('start_time')
       .then(({ data, error: err }) => {
@@ -34,18 +35,27 @@ export default function Absentees({ semester, version }) {
   const list = useMemo(() => {
     const map = new Map()
     for (const r of rows || []) {
-      const key = r.google_event_id || r.id
+      const key = groupKey(r)
       const att = Array.isArray(r.attendance) ? r.attendance[0] : r.attendance
       const start = hhmm(r.start_time)
       const end = hhmm(r.end_time)
-      if (!map.has(key)) map.set(key, { key, date: r.session_date, start, end, subject: r.subjects?.name || 'Class', colour: r.subjects?.colour, sessions: 0, reasons: [] })
+      if (!map.has(key)) map.set(key, { key, subjectId: r.subject_id, date: r.session_date, start, end, subject: r.subjects?.name || 'Class', colour: r.subjects?.colour, sessions: 0, reasons: [] })
       const b = map.get(key)
       b.sessions += 1
       if (start < b.start) b.start = start
       if (end > b.end) b.end = end
       if (att?.reason && !b.reasons.includes(att.reason)) b.reasons.push(att.reason)
     }
-    return [...map.values()].sort((a, b) => (a.date === b.date ? a.start.localeCompare(b.start) : b.date.localeCompare(a.date)))
+    // Back-to-back classes of the same subject on one day are shown as one line.
+    const joined = []
+    for (const b of [...map.values()].sort((a, c) => a.date.localeCompare(c.date) || (a.subjectId || '').localeCompare(c.subjectId || '') || a.start.localeCompare(c.start))) {
+      const prev = joined[joined.length - 1]
+      if (prev && prev.date === b.date && prev.subjectId === b.subjectId && prev.end === b.start) {
+        prev.end = b.end; prev.sessions += b.sessions
+        b.reasons.forEach((x) => { if (!prev.reasons.includes(x)) prev.reasons.push(x) })
+      } else joined.push(b)
+    }
+    return joined.sort((a, b) => (a.date === b.date ? a.start.localeCompare(b.start) : b.date.localeCompare(a.date)))
   }, [rows])
 
   const names = [...new Set(list.map((b) => b.subject))].sort()

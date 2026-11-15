@@ -16,7 +16,7 @@ import Tasks from './Tasks.jsx'
 import GettingStarted from './GettingStarted.jsx'
 import { clearOfflineData, onSwMessage, syncPush } from './pwa.js'
 import { nowIST } from './dateUtils.js'
-import { attOf } from './calendarLogic.js'
+import { attOf, toBlocks } from './calendarLogic.js'
 import { BottomNav, FidgetButton, LiveClock, NavMenu, Roll, ThemeToggle, useTheme } from './Shell.jsx'
 import { fetchPending, flushQueue, markSessions, withQueue } from './attendance.js'
 
@@ -249,7 +249,7 @@ export default function App() {
     await supabase.auth.signOut({ scope: 'local' })
   }
 
-  const pendingCount = new Set(pending.map((r) => r.google_event_id || r.id)).size
+  const pendingCount = toBlocks(pending).length
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'calendar', label: 'Calendar' },

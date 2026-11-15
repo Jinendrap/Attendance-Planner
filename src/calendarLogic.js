@@ -7,11 +7,16 @@ export const isStarted = (date, start, now) =>
   date < now.date || (date === now.date && toMin(start) <= now.minutes)
 export const hasStarted = (row, now) => isStarted(row.session_date, hhmm(row.start_time), now)
 
-// Sessions of one class (e.g. the parts of a 2-hour lab) are shown as one block.
+// Which sessions belong to one class: imported and extra classes share a google_event_id;
+// classes added by hand share their weekly slot and date.
+export const groupKey = (r) => r.google_event_id || (r.slot_id ? `${r.slot_id}|${r.session_date}` : r.id)
+
+// Sessions of one class (e.g. the parts of a 2-hour class) are shown as one block.
+// Classes of the same subject that run straight after each other on a day are joined into one block too.
 export function toBlocks(rows) {
   const map = new Map()
   for (const r of rows) {
-    const key = r.google_event_id ? `${r.google_event_id}` : r.id
+    const key = groupKey(r)
     const start = hhmm(r.start_time)
     const end = hhmm(r.end_time)
     if (!map.has(key)) {
@@ -27,12 +32,24 @@ export function toBlocks(rows) {
     if (start < b.start) b.start = start
     if (end > b.end) b.end = end
   }
-  return [...map.values()].map((b) => ({
+  const statusOf = (s) => (s.every((x) => x === 'cancelled') ? 'cancelled' : s.every((x) => x === 'holiday') ? 'holiday' : 'scheduled')
+  const sorted = [...map.values()].sort((a, b) => a.date.localeCompare(b.date) || (a.subjectId || '').localeCompare(b.subjectId || '') || a.start.localeCompare(b.start))
+  const merged = []
+  for (const b of sorted) {
+    const prev = merged[merged.length - 1]
+    if (prev && prev.date === b.date && prev.subjectId === b.subjectId && prev.isExtra === b.isExtra
+      && prev.end === b.start && statusOf(prev.statuses) === statusOf(b.statuses)) {
+      prev.ids.push(...b.ids); prev.statuses.push(...b.statuses); prev.list.push(...b.list)
+      prev.end = b.end
+    } else {
+      merged.push(b)
+    }
+  }
+  return merged.map((b) => ({
     ...b,
     parts: b.list.length,
-    list: b.list.sort((x, y) => x.part - y.part),
-    status: b.statuses.every((s) => s === 'cancelled') ? 'cancelled'
-      : b.statuses.every((s) => s === 'holiday') ? 'holiday' : 'scheduled',
+    list: b.list.sort((x, y) => x.start.localeCompare(y.start) || x.part - y.part),
+    status: statusOf(b.statuses),
   }))
 }
 
