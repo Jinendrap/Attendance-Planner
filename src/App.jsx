@@ -26,6 +26,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [semester, setSemester] = useState(null)
   const [view, setView] = useState('overview')
+  const [settingsPage, setSettingsPage] = useState(null) // which Settings page is open (null = the list)
   const [homeKey, setHomeKey] = useState(0)
   const [pending, setPending] = useState([])
   const [notice, setNotice] = useState('')
@@ -97,7 +98,7 @@ export default function App() {
 
   // Back / forward buttons move between screens instead of leaving the app.
   useEffect(() => {
-    const onPop = (e) => { const v = e.state && e.state.view; if (v) setView(v) }
+    const onPop = (e) => { const v = e.state && e.state.view; if (v) { setView(v); setSettingsPage(e.state.page || null) } }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -259,14 +260,15 @@ export default function App() {
     { id: 'settings', label: 'Settings' },
   ]
   // Go to a screen and remember it in the browser history, so Back returns here.
-  const go = (v) => {
+  const go = (v, page = null) => {
     setMenuOpen(false)
     const st = window.history.state
-    if (!(st && st.view === v)) {
-      if (st && st.layer) window.history.replaceState({ view: v }, '')
-      else window.history.pushState({ view: v }, '')
+    if (!(st && st.view === v && (st.page || null) === page)) {
+      if (st && st.layer) window.history.replaceState({ view: v, page }, '')
+      else window.history.pushState({ view: v, page }, '')
     }
     setView(v)
+    setSettingsPage(page)
     window.scrollTo(0, 0)
   }
   const endIntro = () => { try { sessionStorage.setItem('cap_intro', '1') } catch { /* ignore */ } setIntro(false) }
@@ -305,8 +307,8 @@ export default function App() {
   return (
     <div className={`page ${semester && view !== 'import' ? 'has-bnav' : ''}`}>
       <header className="topbar">
-        <Logo size={32} />
-        <strong className="brand"><span className="brand-long">College Attendance Planner</span><span className="brand-short">Attendance</span></strong>
+        <button className="logohome" onClick={() => go('overview')} aria-label="Go to Overview" title="Overview"><Logo size={32} /></button>
+        <strong className="brand" onClick={() => go('overview')} style={{ cursor: 'pointer' }}><span className="brand-long">College Attendance Planner</span><span className="brand-short">Attendance</span></strong>
         <LiveClock />
         <FidgetButton onClick={() => setFidget(true)} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -320,7 +322,7 @@ export default function App() {
           session={session}
           semester={semester}
           calendarName={profile.calendar_name}
-          onCancel={() => go('settings')}
+          onCancel={() => go('settings', 'timetable')}
           onDone={() => { setHomeKey(homeKey + 1); go('calendar') }}
         />
       ) : (
@@ -333,14 +335,14 @@ export default function App() {
             ))}
           </nav>
           {notice && <p className="notice">{notice}</p>}
-          {hasSubjects === false && ['overview', 'calendar', 'attendance'].includes(view) && <GettingStarted onImport={() => go('import')} onManual={() => go('settings')} />}
+          {hasSubjects === false && ['overview', 'calendar', 'attendance'].includes(view) && <GettingStarted onImport={() => go('import')} onManual={() => go('settings', 'timetable')} />}
           {view === 'overview' && <Overview semester={semester} version={marksVersion + homeKey} pendingCount={pendingCount} onGo={go} onMark={handleMark} />}
           {view === 'tasks' && <Tasks semester={semester} version={homeKey} />}
           {view === 'calendar' && <CalendarView key={homeKey} semester={semester} onMark={handleMark} />}
           {view === 'attendance' && <Dashboard semester={semester} version={marksVersion + homeKey} />}
           {view === 'leave' && <LeavePlanner semester={semester} userId={userId} version={marksVersion + homeKey} />}
           {view === 'pending' && <PendingView rows={pending} onMark={handleMark} />}
-          {view === 'settings' && <Settings email={session.user.email} userId={userId} semester={semester} profile={profile} onProfile={setProfile} homeKey={homeKey} onSignOut={signOut} onDeleted={afterDelete} onImport={() => go('import')} />}
+          {view === 'settings' && <Settings email={session.user.email} userId={userId} semester={semester} profile={profile} onProfile={setProfile} homeKey={homeKey} onSignOut={signOut} onDeleted={afterDelete} onImport={() => go('import')} page={settingsPage} onPage={(p) => go('settings', p)} />}
         </>
       )}
       {semester && view !== 'import' && <BottomNav view={view} onGo={go} onMore={() => setMenuOpen(true)} pendingCount={pendingCount} />}

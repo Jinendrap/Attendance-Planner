@@ -521,3 +521,19 @@ tfoot .totalrow td { border-bottom: 0; }
   .backdrop { align-items: end; padding: 0; }
   .modal { max-width: none; border-radius: 24px 24px 0 0; max-height: 88vh; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
 }
+
+/* ---------- Settings list and logo button ---------- */
+.setlist { display: flex; flex-direction: column; gap: 10px; }
+button.setrow:not(.tile), button.setrow:not(.tile):active, button.setrow:not(.tile):focus {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px 18px; border-radius: 22px;
+  background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge); color: var(--ink);
+}
+@media (hover: hover) { button.setrow:not(.tile):hover { background: var(--glass-solid); color: var(--ink); } }
+.setrow .ico { flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--field); display: grid; place-items: center; }
+.setrow .txt { flex: 1; min-width: 0; }
+.setrow .txt strong { display: block; font-size: 1.05rem; letter-spacing: -.01em; }
+.setrow .txt span { display: block; font-weight: 400; font-size: .88rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setrow .chev { flex: none; font-size: 1.6rem; line-height: 1; color: var(--muted); }
+@media (min-width: 900px) { .setlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+button.logohome:not(.tile), button.logohome:not(.tile):hover, button.logohome:not(.tile):focus { flex: none; display: flex; padding: 0; background: transparent; border-radius: 10px; line-height: 0; }

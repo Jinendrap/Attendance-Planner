@@ -144,8 +144,13 @@ export default function Home({ semester, userId, onImport }) {
     return (
       <section className="panel">
         <h2>{semester.name}</h2>
-        <p>No timetable yet. Import it from your Google Calendar to get started.</p>
-        <button onClick={onImport}>Import from Google Calendar</button>
+        <p>No timetable yet. Import it from your Google Calendar, or add your subjects by hand.</p>
+        <div className="row">
+          <button onClick={onImport}>Import from Google Calendar</button>
+          <button className="secondary" onClick={() => setAdding(adding === 'subject' ? null : 'subject')}>+ Add subject</button>
+        </div>
+        {adding === 'subject' && <AddSubjectForm semester={semester} userId={userId} onDone={done} onCancel={() => setAdding(null)} />}
+        {note && <p className="muted">{note}</p>}
       </section>
     )
   }
