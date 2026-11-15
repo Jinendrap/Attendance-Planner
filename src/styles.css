@@ -537,3 +537,11 @@ button.setrow:not(.tile), button.setrow:not(.tile):active, button.setrow:not(.ti
 .setrow .chev { flex: none; font-size: 1.6rem; line-height: 1; color: var(--muted); }
 @media (min-width: 900px) { .setlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 button.logohome:not(.tile), button.logohome:not(.tile):hover, button.logohome:not(.tile):focus { flex: none; display: flex; padding: 0; background: transparent; border-radius: 10px; line-height: 0; }
+
+/* Calendar blocks: lines that do not fit are hidden by the code in CalendarView (never half-cut). */
+.blk strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.blk.tiny { padding-top: 2px; padding-bottom: 2px; }
+.blk.tiny strong { -webkit-line-clamp: 1; }
+.blk span { display: block; min-width: 0; white-space: nowrap; overflow: hidden; }
+.blk > * { flex: none; }
+.blk.one strong, .blk.tiny strong { -webkit-line-clamp: 1; }

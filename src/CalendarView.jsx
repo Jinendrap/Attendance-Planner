@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from './supabaseClient.js'
 import { addDays, addMonths, mondayOf, monthGrid, fmt, toMin, nowIST } from './dateUtils.js'
@@ -12,6 +12,46 @@ import useBackClose from './useBack.js'
 
 const PX = 52 // pixels per hour
 const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+// One class box. It only shows lines that fit completely: any line that is too wide or does not fit in the height is hidden, never cut.
+function Blk({ b, st, top, h, onOpen }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return undefined
+    const fit = () => {
+      const parts = ['.badge', '.rf', '.tm'].map((s) => el.querySelector(s)).filter(Boolean)
+      const over = () => el.scrollHeight > el.clientHeight + 1
+      el.classList.remove('one')
+      parts.forEach((p) => { p.style.display = '' })
+      parts.forEach((p) => { if (p.scrollWidth > p.clientWidth + 1) p.style.display = 'none' })
+      // Too tall: drop the status and room lines first, then shorten the name to one line, and the time last.
+      for (const p of parts.filter((x) => x.classList.contains('badge') || x.classList.contains('rf'))) { if (over() && p.style.display !== 'none') p.style.display = 'none' }
+      if (over()) el.classList.add('one')
+      const tm = parts.find((x) => x.classList.contains('tm'))
+      if (over() && tm) tm.style.display = 'none'
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  return (
+    <button
+      ref={ref}
+      className={`blk ${h < 36 ? 'tiny' : ''} ${st}`}
+      title={`${b.subject} ${b.start}–${b.end}${b.faculty ? ` · ${b.faculty}` : ''}`}
+      style={{ top, height: h, left: `${(b.lane * 100) / b.lanes}%`, width: `${100 / b.lanes}%`, borderLeftColor: b.colour, background: `${b.colour}22` }}
+      onClick={() => onOpen(b)}
+    >
+      <strong>{b.subject}</strong>
+      <span className="tm">{b.start}–{b.end}</span>
+      {(b.room || b.faculty) && <span className="rf">{[b.room, b.faculty].filter(Boolean).join(' · ')}</span>}
+      {STATE_BADGE[st] && <span className={`badge ${st}`}>{STATE_BADGE[st]}</span>}
+    </button>
+  )
+}
 
 function TimeGrid({ days, byDay, now, onOpen, onDay }) {
   const all = days.flatMap((d) => byDay[d] || [])
@@ -42,20 +82,7 @@ function TimeGrid({ days, byDay, now, onOpen, onDay }) {
               const st = blockState(b, now)
               const top = ((toMin(b.start) - startH * 60) * PX) / 60
               const h = Math.max(24, ((toMin(b.end) - toMin(b.start)) * PX) / 60 - 2)
-              return (
-                <button
-                  key={b.key}
-                  className={`blk ${st}`}
-                  title={`${b.subject} ${b.start}–${b.end}${b.faculty ? ` · ${b.faculty}` : ''}`}
-                  style={{ top, height: h, left: `${(b.lane * 100) / b.lanes}%`, width: `${100 / b.lanes}%`, borderLeftColor: b.colour, background: `${b.colour}22` }}
-                  onClick={() => onOpen(b)}
-                >
-                  <strong>{b.subject}</strong>
-                  <span>{b.start}–{b.end}{b.room ? ` · ${b.room}` : ''}</span>
-                  {b.faculty && <span className="fac">{b.faculty}</span>}
-                  {STATE_BADGE[st] && <span className={`badge ${st}`}>{STATE_BADGE[st]}</span>}
-                </button>
-              )
+              return <Blk key={b.key} b={b} st={st} top={top} h={h} onOpen={onOpen} />
             })}
             {d === now.date && now.minutes >= startH * 60 && now.minutes <= endH * 60 && (
               <div className="nowline" style={{ top: ((now.minutes - startH * 60) * PX) / 60 }} />
