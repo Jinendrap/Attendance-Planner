@@ -5,6 +5,8 @@ import { nowIST, weekdayOf } from './dateUtils.js'
 import { DAYS, hhmm } from './config.js'
 import { attOf } from './calendarLogic.js'
 import { toCsv, downloadCsv } from './csv.js'
+import { groupAbsences, absenceMinutes, dur } from './absenceLogic.js'
+import { fmt } from './dateUtils.js'
 
 async function allSessions(semesterId) {
   const out = []
@@ -12,6 +14,20 @@ async function allSessions(semesterId) {
     const { data, error } = await supabase.from('sessions')
       .select('subject_id, session_date, start_time, end_time, room, faculty, status, is_extra, subjects(name), attendance(status, reason)')
       .eq('semester_id', semesterId).order('session_date').order('start_time').range(from, from + 999)
+    if (error) throw error
+    out.push(...data)
+    if (data.length < 1000) break
+  }
+  return out
+}
+
+async function absentSessions(semesterId) {
+  const out = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from('sessions')
+      .select('id, session_date, start_time, end_time, google_event_id, slot_id, subject_id, subjects(name, colour), attendance!inner(status, reason)')
+      .eq('semester_id', semesterId).eq('attendance.status', 'absent')
+      .order('session_date').order('start_time').range(from, from + 999)
     if (error) throw error
     out.push(...data)
     if (data.length < 1000) break
@@ -62,6 +78,18 @@ export default function ExportPanel({ semester }) {
             { label: 'Classes still to come', value: (r) => r.remaining },
           ], rows))
         }
+      } else if (kind === 'absences') {
+        const list = groupAbsences(await absentSessions(semester.id))
+        downloadCsv(`${slug}-absences-${stamp}.csv`, toCsv([
+          { label: 'Date', value: (b) => b.date },
+          { label: 'Day', value: (b) => fmt(b.date, { weekday: 'long' }) },
+          { label: 'Class', value: (b) => b.subject },
+          { label: 'Start', value: (b) => b.start },
+          { label: 'End', value: (b) => b.end },
+          { label: 'Duration', value: (b) => dur(absenceMinutes(b)) },
+          { label: 'Sessions', value: (b) => b.sessions },
+          { label: 'Reason', value: (b) => b.reasons.join(', ') },
+        ], list))
       } else if (kind === 'tasks') {
         const [t, s] = await Promise.all([
           supabase.from('tasks').select('*').eq('semester_id', semester.id).order('due_date', { nullsFirst: false }),
@@ -104,6 +132,7 @@ export default function ExportPanel({ semester }) {
       <div className="row nomargin">
         <B k="summary">Attendance summary</B>
         <B k="sessions">All classes</B>
+        <B k="absences">Absence table</B>
         <B k="tasks">Tasks</B>
         <B k="remarks">Remarks</B>
       </div>
