@@ -41,7 +41,8 @@ Rules: slate is the only brand colour (the call-to-action block and the handwrit
 - **Accordion (`.acc`):** subject cards on the Attendance tab; tap to open.
 - **Buttons:** solid slate is the main action, outlined is secondary, underlined text (`.link`) is a quiet link, `.cta` has the arrow chip.
 - **Calendar:** big title, round previous/next, segmented Day/Week/Month, today column tinted, floating "+ Extra class" on phones.
-- **Motion:** short and soft (menu reveal, day swipe, ID card swing). Everything respects "reduce motion".
+- **Pencil loop:** the hand-drawn circle from the Calendar-3 template (`src/Pencil.jsx`). It draws itself around a date, a week header, a month cell or a class when you hover it (`.hp` elements), and stays drawn around the time in "Happening now". It may reach past the thing it circles. Colour: `--pencil` (slate). Handwriting: `--hand-font` (Reenie Beanie).
+- **Motion:** soft and slow-out (`--ease` / `--ease-io` at the top of `styles.css`): screens and tiles rise in, windows pop up, subject cards open smoothly, bars grow, the theme cross-fades, the day swipe slides. Everything respects "reduce motion".
 
 ## Logo
 An ID badge on a lanyard with a tick and a small green "live" dot, on a slate tile. Source: `public/icons/logo.svg` (same artwork in `src/Logo.jsx`).

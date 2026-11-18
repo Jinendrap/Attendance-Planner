@@ -7,6 +7,7 @@ import { toBlocks, blockState, isStarted, STATE_LABEL } from './calendarLogic.js
 import { groupTasks, dueLabel } from './taskLogic.js'
 import RemarksPanel from './RemarksPanel.jsx'
 import AttendancePanel from './AttendancePanel.jsx'
+import Pencil from './Pencil.jsx'
 
 const fmtPct = (p) => (p === null ? '—' : `${p.toFixed(2)}%`)
 const STATE_TEXT = { safe: 'On track', edge: 'On the limit', below: 'Below required', none: 'No data' }
@@ -95,7 +96,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
           {focus ? (
             <>
               <span>
-                <span className="circled big">{focus.start}</span>
+                <span className="circled big">{focus.start}<Pencil seed={1} sw={4} fx={0.28} fy={0.5} maxX={34} maxY={20} /></span>
                 <span style={{ display: 'block', marginTop: 12 }}><strong>{focus.subject}</strong></span>
                 <span className="muted">{focus.end ? `until ${focus.end}` : ''}{focus.room ? ` · ${focus.room}` : ''}{focus.faculty ? ` · ${focus.faculty}` : ''}</span>
               </span>

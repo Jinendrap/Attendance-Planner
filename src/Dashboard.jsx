@@ -71,29 +71,31 @@ export default function Dashboard({ semester, version }) {
           {data.pending > 0 && <p className="muted" style={{ margin: '4px 0' }}>{data.pending} started {data.pending === 1 ? 'class is' : 'classes are'} not marked yet and not counted. Mark them in the Pending tab.</p>}
         </div>
       </section>
-      <div className="grid wide">
+      <div className="grid wide accgrid">
         {data.rows.map((r) => {
           const isOpen = openId === r.subject.id
           return (
             <section className={`acc subcard ${isOpen ? 'open' : ''}`} key={r.subject.id} style={{ borderLeftColor: r.subject.colour }}>
-              <button className="acc-head" aria-expanded={isOpen} onClick={() => setOpenId(isOpen ? null : r.subject.id)}>
+              <button className="acc-head" aria-expanded={isOpen} aria-controls={`acc-${r.subject.id}`} onClick={() => setOpenId(isOpen ? null : r.subject.id)}>
                 <span className="nm">{r.subject.name}</span>
                 <span className={`pct bigpct ${r.state}`} style={{ fontSize: '1.5rem' }}>{fmtPct(r.pct)}</span>
                 <span className="plus" aria-hidden="true">+</span>
                 <span className="acc-sub">{STATE_TEXT[r.state]} · {advice(r, 'class')}</span>
               </button>
               <Bar r={r} />
-              {isOpen && (
-                <div className="acc-body">
-                  <div className="stats">
-                    <div><span className="big">{r.T}</span><span className="muted">conducted</span></div>
-                    <div><span className="big">{r.A}</span><span className="muted">attended</span></div>
-                    <div><span className="big">{r.absent}</span><span className="muted">missed</span></div>
-                    <div><span className="big">{r.remaining}</span><span className="muted">still to come</span></div>
+              <div className="acc-panel" id={`acc-${r.subject.id}`} role="region" aria-hidden={!isOpen}>
+                <div className="acc-clip">
+                  <div className="acc-body">
+                    <div className="stats">
+                      <div><span className="big">{r.T}</span><span className="muted">conducted</span></div>
+                      <div><span className="big">{r.A}</span><span className="muted">attended</span></div>
+                      <div><span className="big">{r.absent}</span><span className="muted">missed</span></div>
+                      <div><span className="big">{r.remaining}</span><span className="muted">still to come</span></div>
+                    </div>
+                    <p className="muted">Required {r.required}% · <span className={`pill ${r.state}`}>{STATE_TEXT[r.state]}</span></p>
                   </div>
-                  <p className="muted">Required {r.required}% · <span className={`pill ${r.state}`}>{STATE_TEXT[r.state]}</span></p>
                 </div>
-              )}
+              </div>
             </section>
           )
         })}

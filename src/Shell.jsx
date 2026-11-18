@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 
 // ---- Light / dark theme (remembered on this device) ----
 const KEY = 'cap_theme'
@@ -19,7 +20,18 @@ export function useTheme() {
     if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0b0c' : '#e5e4e2')
     try { localStorage.setItem(KEY, theme) } catch { /* ignore */ }
   }, [theme])
-  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
+  // The whole page cross-fades to the other theme (browsers without View Transitions just switch).
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (document.startViewTransition && !calm) {
+      document.startViewTransition(() => {
+        document.documentElement.dataset.theme = next
+        flushSync(() => setTheme(next))
+      })
+    } else setTheme(next)
+  }
+  return [theme, toggle]
 }
 
 // Text that "rolls" up on hover (only on devices with a mouse).

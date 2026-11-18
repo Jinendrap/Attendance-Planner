@@ -9,6 +9,7 @@ import RemarksPanel from './RemarksPanel.jsx'
 import ExtraClassForm from './ExtraClassForm.jsx'
 import useSwipe from './useSwipe.js'
 import useBackClose from './useBack.js'
+import Pencil from './Pencil.jsx'
 
 const PX = 52 // pixels per hour
 const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -38,18 +39,21 @@ function Blk({ b, st, top, h, onOpen }) {
     return () => ro.disconnect()
   })
   return (
-    <button
-      ref={ref}
-      className={`blk ${h < 36 ? 'tiny' : ''} ${st}`}
-      title={`${b.subject} ${b.start}–${b.end}${b.faculty ? ` · ${b.faculty}` : ''}`}
-      style={{ top, height: h, left: `${(b.lane * 100) / b.lanes}%`, width: `${100 / b.lanes}%`, borderLeftColor: b.colour, background: `${b.colour}22` }}
-      onClick={() => onOpen(b)}
-    >
-      <strong>{b.subject}</strong>
-      <span className="tm">{b.start}–{b.end}</span>
-      {(b.room || b.faculty) && <span className="rf">{[b.room, b.faculty].filter(Boolean).join(' · ')}</span>}
-      {STATE_BADGE[st] && <span className={`badge ${st}`}>{STATE_BADGE[st]}</span>}
-    </button>
+    <div className="blkw hp" style={{ top, height: h, left: `${(b.lane * 100) / b.lanes}%`, width: `${100 / b.lanes}%` }}>
+      <button
+        ref={ref}
+        className={`blk ${h < 36 ? 'tiny' : ''} ${st}`}
+        title={`${b.subject} ${b.start}–${b.end}${b.faculty ? ` · ${b.faculty}` : ''}`}
+        style={{ borderLeftColor: b.colour, background: `${b.colour}22` }}
+        onClick={() => onOpen(b)}
+      >
+        <strong>{b.subject}</strong>
+        <span className="tm">{b.start}–{b.end}</span>
+        {(b.room || b.faculty) && <span className="rf">{[b.room, b.faculty].filter(Boolean).join(' · ')}</span>}
+        {STATE_BADGE[st] && <span className={`badge ${st}`}>{STATE_BADGE[st]}</span>}
+      </button>
+      <Pencil seed={Math.round(top / 7) + b.lane} sw={2.6} fx={0.08} fy={0.26} maxX={24} maxY={15} maxW={320} />
+    </div>
   )
 }
 
@@ -65,12 +69,13 @@ function TimeGrid({ days, byDay, now, onOpen, onDay }) {
     backgroundImage: `repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${PX}px)`,
   }
   return (
-    <div className="scroll">
+    <div className="scroll tgwrap">
       <div className="tg" style={{ gridTemplateColumns: cols, minWidth: days.length > 1 ? 560 : 0 }}>
         <div />
-        {days.map((d) => (
-          <button key={d} className={`tghead ${d === now.date ? 'today' : ''}`} onClick={() => onDay(d)}>
+        {days.map((d, i) => (
+          <button key={d} className={`tghead hp ${d === now.date ? 'today' : ''}`} onClick={() => onDay(d)}>
             {fmt(d, { weekday: 'short' })} {fmt(d, { day: 'numeric' })}
+            <Pencil seed={i} sw={2.4} fx={0.16} fy={0.3} maxX={18} maxY={9} maxW={92} center />
           </button>
         ))}
         <div className="hours" style={{ height }}>
@@ -98,15 +103,16 @@ function MonthGrid({ date, byDay, now, onDay }) {
   return (
     <div className="month">
       {WEEKDAY_SHORT.map((w) => <div key={w} className="mhead">{w}</div>)}
-      {monthGrid(date).map((d) => {
+      {monthGrid(date).map((d, i) => {
         const list = byDay[d] || []
         return (
-          <button key={d} className={`mcell ${d.slice(0, 7) !== date.slice(0, 7) ? 'other' : ''} ${d === now.date ? 'today' : ''}`} onClick={() => onDay(d)}>
+          <button key={d} className={`mcell hp ${d.slice(0, 7) !== date.slice(0, 7) ? 'other' : ''} ${d === now.date ? 'today' : ''}`} onClick={() => onDay(d)}>
             <span className="mnum">{Number(d.slice(8))}</span>
             {list.slice(0, 3).map((b) => (
               <span key={b.key} className={`chip ${blockState(b, now)}`} style={{ background: `${b.colour}30`, borderLeftColor: b.colour }}>{b.subject}</span>
             ))}
             {list.length > 3 && <span className="more">+{list.length - 3}</span>}
+            <Pencil seed={i} sw={3} fx={0.07} fy={0.1} maxX={14} maxY={10} />
           </button>
         )
       })}
@@ -264,14 +270,15 @@ export default function CalendarView({ semester, onMark }) {
       {note && <p className="notice">{note}</p>}
       {view === 'day' && (
         <div className="daystrip" role="group" aria-label="Days of this week">
-          {Array.from({ length: 7 }, (_, i) => addDays(mondayOf(date), i)).map((d) => (
+          {Array.from({ length: 7 }, (_, i) => addDays(mondayOf(date), i)).map((d, i) => (
             <button
               key={d}
-              className={`dchip ${d === date ? 'on' : ''} ${d === now.date ? 'today' : ''}`}
+              className={`dchip hp ${d === date ? 'on' : ''} ${d === now.date ? 'today' : ''}`}
               aria-pressed={d === date}
               onClick={() => { setSlide(d > date ? 'next' : d < date ? 'prev' : ''); setDate(d) }}
             >
               {fmt(d, { weekday: 'short' })}<b>{Number(d.slice(8))}</b>
+              <Pencil seed={i} sw={2.6} fx={0.12} fy={0.14} maxX={12} maxY={9} />
             </button>
           ))}
         </div>
@@ -281,9 +288,13 @@ export default function CalendarView({ semester, onMark }) {
           {loading && !rows.length ? <p className="muted">Loading…</p> : <TimeGrid days={[date]} byDay={byDay} now={now} onOpen={(b) => setOpenKey(b.key)} onDay={goDay} />}
           {!loading && !(byDay[date] || []).length && <p className="muted">No classes on this day.</p>}
         </div>
-      ) : loading && !rows.length ? <p className="muted">Loading…</p> : view === 'month'
-        ? <MonthGrid date={date} byDay={byDay} now={now} onDay={goDay} />
-        : <TimeGrid days={weekDays()} byDay={byDay} now={now} onOpen={(b) => setOpenKey(b.key)} onDay={goDay} />}
+      ) : loading && !rows.length ? <p className="muted">Loading…</p> : (
+        <div key={view} className={`viewfade ${loading ? 'busy' : ''}`}>
+          {view === 'month'
+            ? <MonthGrid date={date} byDay={byDay} now={now} onDay={goDay} />
+            : <TimeGrid days={weekDays()} byDay={byDay} now={now} onOpen={(b) => setOpenKey(b.key)} onDay={goDay} />}
+        </div>
+      )}
       <p className="legend muted">Tap a class to mark attendance. Cancelled classes are struck through.{view === 'day' ? ' Swipe left or right to change the day.' : ''}</p>
 
       {open && createPortal(
