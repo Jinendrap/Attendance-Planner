@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient.js'
 import { fetchAllSessions, withQueue } from './attendance.js'
 import { buildDashboard } from './engine.js'
-import { nowIST, fmt, toMin } from './dateUtils.js'
+import { nowIST, fmt, toMin, addDays } from './dateUtils.js'
 import { toBlocks, blockState, isStarted, STATE_LABEL } from './calendarLogic.js'
 import { groupTasks, dueLabel } from './taskLogic.js'
 import RemarksPanel from './RemarksPanel.jsx'
@@ -21,18 +21,28 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
   const [error, setError] = useState('')
   const [open, setOpen] = useState(null) // key of the class whose remarks are showing
   const [attOpen, setAttOpen] = useState(null) // key of the class whose attendance panel is showing
-  const now = nowIST()
+  // The clock ticks, so "Next up" moves on by itself when a class starts or ends.
+  const [now, setNow] = useState(nowIST)
+  useEffect(() => {
+    const tick = () => setNow(nowIST())
+    const t = setInterval(tick, 20000)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick) }
+  }, [])
 
   useEffect(() => {
     let off = false
     ;(async () => {
       try {
         const today = nowIST().date
-        const [s, all, todayRows, tasks, remarks] = await Promise.all([
+        const [s, all, todayRows, aheadRows, tasks, remarks] = await Promise.all([
           supabase.from('subjects').select('*').eq('semester_id', semester.id),
           fetchAllSessions(semester.id),
           supabase.from('sessions').select('*, subjects(name, colour), attendance(status, reason)')
             .eq('semester_id', semester.id).eq('session_date', today).order('start_time'),
+          // the next few days, for when nothing is left today
+          supabase.from('sessions').select('*, subjects(name, colour), attendance(status, reason)')
+            .eq('semester_id', semester.id).gt('session_date', today).order('session_date').order('start_time').limit(40),
           supabase.from('tasks').select('*, subjects(name, colour)').eq('semester_id', semester.id).eq('done', false),
           supabase.from('class_remarks').select('*, subjects(name, colour)').eq('semester_id', semester.id)
             .order('created_at', { ascending: false }).limit(5),
@@ -43,6 +53,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
         setData({
           dash: buildDashboard(s.data, all, semester.overall_required_pct, nowIST()),
           blocks: toBlocks(withQueue(todayRows.data)),
+          ahead: aheadRows.error ? [] : toBlocks(withQueue(aheadRows.data)),
           tasks: tasks.error ? null : tasks.data,
           remarks: remarks.error ? null : remarks.data,
         })
@@ -57,15 +68,19 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
   if (error) return <section className="panel"><p className="error">{error}</p></section>
   if (!data) return <section className="panel"><p className="muted">Loading…</p></section>
 
-  const { dash, blocks, tasks, remarks } = data
+  const { dash, blocks, ahead, tasks, remarks } = data
   const o = dash.overall
   const risk = dash.rows.filter((r) => r.state === 'below' || r.state === 'edge')
   const g = tasks ? groupTasks(tasks, now.date) : null
   const urgent = g ? [...g.overdue, ...g.today, ...g.soon] : []
-  const todays = blocks.filter((b) => b.status === 'scheduled')
+  // Earliest first (the blocks come grouped by subject, not by time).
+  const byTime = (a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)
+  const todays = blocks.filter((b) => b.status === 'scheduled').sort(byTime)
   const live = todays.find((b) => toMin(b.start) <= now.minutes && toMin(b.end) > now.minutes)
   const upcoming = todays.find((b) => toMin(b.start) > now.minutes)
-  const focus = live || upcoming
+  const later = !live && !upcoming ? ahead.filter((b) => b.status === 'scheduled').sort(byTime)[0] : null
+  const focus = live || upcoming || later
+  const laterDay = later ? (later.date === addDays(now.date, 1) ? 'Tomorrow' : fmt(later.date, { weekday: 'long', day: 'numeric', month: 'short' })) : ''
   const daysLeft = Math.max(0, daysBetween(now.date, semester.end_date))
 
   return (
@@ -92,7 +107,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
         </button>
 
         <div className="tile next s2 m2">
-          <span className="eyebrow">{live ? 'Happening now' : 'Next up'}</span>
+          <span className="eyebrow">{live ? 'Happening now' : later ? `Next up · ${laterDay}` : 'Next up'}</span>
           {focus ? (
             <>
               <span>
@@ -100,7 +115,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
                 <span style={{ display: 'block', marginTop: 12 }}><strong>{focus.subject}</strong></span>
                 <span className="muted">{focus.end ? `until ${focus.end}` : ''}{focus.room ? ` · ${focus.room}` : ''}{focus.faculty ? ` · ${focus.faculty}` : ''}</span>
               </span>
-              <span className="hand">{live ? 'you are here!' : 'see you there →'}</span>
+              <span className="hand">{live ? 'you are here!' : later ? 'see you then →' : 'see you there →'}</span>
             </>
           ) : (
             <span className="big" style={{ fontSize: '1.6rem' }}>{todays.length ? 'All done for today' : 'No classes today'}</span>
