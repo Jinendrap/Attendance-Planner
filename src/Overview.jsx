@@ -3,7 +3,8 @@ import { supabase } from './supabaseClient.js'
 import { fetchAllSessions, withQueue } from './attendance.js'
 import { buildDashboard } from './engine.js'
 import { nowIST, fmt, toMin, addDays } from './dateUtils.js'
-import { toBlocks, blockState, isStarted, STATE_LABEL } from './calendarLogic.js'
+import { toBlocks, blockState, STATE_LABEL } from './calendarLogic.js'
+import { checkHours } from './hoursLogic.js'
 import { groupTasks, dueLabel } from './taskLogic.js'
 import RemarksPanel from './RemarksPanel.jsx'
 import AttendancePanel from './AttendancePanel.jsx'
@@ -54,6 +55,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
           dash: buildDashboard(s.data, all, semester.overall_required_pct, nowIST()),
           blocks: toBlocks(withQueue(todayRows.data)),
           ahead: aheadRows.error ? [] : toBlocks(withQueue(aheadRows.data)),
+          hoursOver: checkHours(s.data, all).reduce((n, r) => n + r.removable.length, 0),
           tasks: tasks.error ? null : tasks.data,
           remarks: remarks.error ? null : remarks.data,
         })
@@ -68,7 +70,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
   if (error) return <section className="panel"><p className="error">{error}</p></section>
   if (!data) return <section className="panel"><p className="muted">Loading…</p></section>
 
-  const { dash, blocks, ahead, tasks, remarks } = data
+  const { dash, blocks, ahead, hoursOver, tasks, remarks } = data
   const o = dash.overall
   const risk = dash.rows.filter((r) => r.state === 'below' || r.state === 'edge')
   const g = tasks ? groupTasks(tasks, now.date) : null
@@ -146,7 +148,6 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
           {!todays.length && <p className="muted">No classes today.</p>}
           {todays.map((b) => {
             const st = blockState(b, now)
-            const started = isStarted(b.date, b.start, now)
             const marked = ['present', 'absent', 'partial'].includes(st)
             return (
               <div className="crow" key={b.key} style={{ borderLeftColor: b.colour }}>
@@ -157,7 +158,7 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
                   <button className={marked ? 'secondary small' : 'small'} onClick={() => setAttOpen(attOpen === b.key ? null : b.key)}>
                     {attOpen === b.key ? 'Hide attendance' : marked ? 'Change attendance' : 'Mark attendance'}
                   </button>
-                  {started && <button className="secondary small" onClick={() => setOpen(open === b.key ? null : b.key)}>{open === b.key ? 'Hide remarks' : 'Remarks'}</button>}
+                  <button className="secondary small" onClick={() => setOpen(open === b.key ? null : b.key)}>{open === b.key ? 'Hide remarks' : 'Remarks'}</button>
                 </div>
                 {attOpen === b.key && <div className="panelx"><AttendancePanel key={b.key} list={b.list} onMark={onMark} /></div>}
                 {open === b.key && (
@@ -167,6 +168,16 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
             )
           })}
         </section>
+
+        {hoursOver > 0 && (
+          <section className="panel s6">
+            <div className="sechead">
+              <h3>Above credit hours</h3>
+              <button className="link" onClick={() => onGo('settings', 'timetable')}>Review</button>
+            </div>
+            <p className="muted">{hoursOver} scheduled {hoursOver === 1 ? 'class is' : 'classes are'} above your subjects’ credit hours (4 credits = 60 hours). You can remove them in Settings, under Course hours.</p>
+          </section>
+        )}
 
         {risk.length > 0 && (
           <section className="panel s3">

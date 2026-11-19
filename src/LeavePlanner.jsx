@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient.js'
 import { fetchAllSessions } from './attendance.js'
 import { simulateLeave } from './engine.js'
 import { attOf } from './calendarLogic.js'
-import { addDays, fmt } from './dateUtils.js'
+import { addDays, fmt, nowIST } from './dateUtils.js'
 import { hhmm } from './config.js'
 import { syncHolidays, releaseHolidayRange } from './holidays.js'
 
@@ -58,7 +58,7 @@ export default function LeavePlanner({ semester, userId, version }) {
   }, [semester.id, version, reload])
 
   const valid = Boolean(from && to && from <= to)
-  const sim = (range, a) => simulateLeave(subjects, sessions, range, a, semester.overall_required_pct)
+  const sim = (range, a) => simulateLeave(subjects, sessions, range, a, semester.overall_required_pct, nowIST())
   const result = useMemo(() => (valid ? sim({ from, to }, assume) : null), [valid, from, to, assume, subjects, sessions]) // eslint-disable-line
 
   const lostByDay = useMemo(() => {

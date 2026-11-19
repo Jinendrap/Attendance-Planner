@@ -29,7 +29,9 @@ Anyone can sign in with Google and gets their own private planner.
 - Present / absent marking, with a Pending list for missed classes
 - Subject-wise attendance dashboard (percentage, classes you can still miss)
 - Leave simulator that uses the real classes on the chosen dates
-- Class remarks, tasks and deadlines, CSV export
+- Class remarks (written any time, opened with a Remarks button), tasks and deadlines, CSV export
+- Experiential classes: a switch per class or per session; they count as Present automatically
+- Course hours: credits per subject (4 credits = 60 hours) and a one-tap clean-up of classes above the limit
 - Installable on Android as an app, works offline for reading, class reminders
 - Light and dark theme
 - A fidget ID card: tap the small ID button in the header to play with it (close with Close, Esc or a tap outside)
@@ -45,7 +47,8 @@ You need free accounts on GitHub, Supabase, Vercel and Google Cloud. Do the step
 1. Create a project at supabase.com. Note the Project URL and the Publishable (anon) key under Project Settings > API.
 2. Open the SQL Editor and run these files from the `supabase/` folder, one at a time, in this order:
    `phase2_schema.sql`, `phase4_attendance.sql`, `phase5b_ignored.sql`, `phase6_holidays.sql`,
-   `phase7_notifications.sql`, `phase8_remarks_tasks.sql`, `phase10_profiles.sql`, `phase11_multiuser.sql`.
+   `phase7_notifications.sql`, `phase8_remarks_tasks.sql`, `phase10_profiles.sql`, `phase11_multiuser.sql`,
+   `phase12_credits_experiential.sql`.
    (`phase1.sql` is not needed.) The last query shows a safety table: every row should say
    "protected by owner policy" or "locked". If any row says PROBLEM, do not share the app.
 

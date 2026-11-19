@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient.js'
 import { fmt } from './dateUtils.js'
+import Expand from './Expand.jsx'
 
 // Remarks for one class (one subject, one date, one start time). A remark can also create a task with a deadline.
 export default function RemarksPanel({ semesterId, subjectId, date, start, onChanged }) {
@@ -11,12 +12,16 @@ export default function RemarksPanel({ semesterId, subjectId, date, start, onCha
   const [kind, setKind] = useState('task')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const [adding, setAdding] = useState(false) // the writing box is hidden until you ask for it
+  const box = useRef(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('class_remarks').select('*')
       .eq('subject_id', subjectId).eq('class_date', date).eq('class_start', start).order('created_at')
     if (error) setMsg('Remarks are not set up yet. Run phase8_remarks_tasks.sql in Supabase.')
     else setList(data)
+    setLoaded(true)
   }, [subjectId, date, start])
 
   useEffect(() => { load() }, [load])
@@ -39,7 +44,7 @@ export default function RemarksPanel({ semesterId, subjectId, date, start, onCha
         })
         if (t.error) throw t.error
       }
-      setNote(''); setHasDue(false); setDue('')
+      setNote(''); setHasDue(false); setDue(''); setAdding(false)
       await load()
       onChanged?.()
     } catch {
@@ -56,6 +61,9 @@ export default function RemarksPanel({ semesterId, subjectId, date, start, onCha
     onChanged?.()
   }
 
+  const showForm = adding || (loaded && list.length === 0 && !msg.startsWith('Remarks are not'))
+  const startAdding = () => { setAdding(true); setTimeout(() => box.current && box.current.focus(), 60) }
+
   return (
     <div className="remarks">
       <h4>Remarks</h4>
@@ -68,7 +76,9 @@ export default function RemarksPanel({ semesterId, subjectId, date, start, onCha
           <button className="secondary small danger" onClick={() => remove(x)} aria-label="Delete remark">✕</button>
         </div>
       ))}
-      <textarea rows="2" placeholder="What was taught, homework, reminders…" value={note} onChange={(e) => setNote(e.target.value)} />
+      {!showForm && <div className="row"><button className="secondary small" onClick={startAdding}>+ Add a remark</button></div>}
+      {showForm && (<>
+      <textarea ref={box} rows="2" placeholder="What was taught, homework, reminders…" value={note} onChange={(e) => setNote(e.target.value)} />
       <label className="check">
         <input type="checkbox" checked={hasDue} onChange={(e) => setHasDue(e.target.checked)} />
         This has a deadline (adds it to Tasks)
@@ -85,7 +95,27 @@ export default function RemarksPanel({ semesterId, subjectId, date, start, onCha
         </div>
       )}
       {msg && <p className="error">{msg}</p>}
-      <div className="row"><button className="small" disabled={busy || !note.trim()} onClick={save}>Save remark</button></div>
+      <div className="row">
+        <button className="small" disabled={busy || !note.trim()} onClick={save}>Save remark</button>
+        {list.length > 0 && <button className="secondary small" onClick={() => { setAdding(false); setNote('') }}>Cancel</button>}
+      </div>
+      </>)}
+      {!showForm && msg && <p className="error">{msg}</p>}
+    </div>
+  )
+}
+
+// The "Remarks" button and the section it opens. Remarks can be written at any time, before, during or after the class.
+export function RemarksButton({ open, onClick }) {
+  return <button className="secondary" aria-expanded={open} onClick={onClick}>Remarks {open ? '▴' : '▾'}</button>
+}
+
+export function RemarksToggle(props) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="attpanel">
+      <div className="row nomargin"><RemarksButton open={open} onClick={() => setOpen(!open)} /></div>
+      <Expand open={open}><RemarksPanel {...props} /></Expand>
     </div>
   )
 }

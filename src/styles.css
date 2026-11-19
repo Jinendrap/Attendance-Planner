@@ -612,3 +612,23 @@ input, select, textarea { transition: border-color .35s var(--ease), background-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
 }
+
+/* ---------- Phase 12: remarks that open on demand, experiential switch, course hours ---------- */
+.expand { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .55s var(--ease), visibility 0s linear .55s; }
+.expand.open { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
+.expand-in { overflow: hidden; min-height: 0; opacity: 0; transition: opacity .35s var(--ease); }
+.expand.open .expand-in { opacity: 1; transition-delay: .08s; }
+.swrow { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 8px 0; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--field); cursor: pointer; font-weight: 600; }
+.swrow > span { display: grid; gap: 2px; }
+.swrow small { font-weight: 400; font-size: .78rem; }
+.swrow input[type=checkbox] { appearance: none; -webkit-appearance: none; flex: none; width: 44px; height: 26px; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 999px; background: var(--track); position: relative; cursor: pointer; transition: background-color .35s var(--ease); }
+.swrow input[type=checkbox]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); transition: transform .4s var(--ease); }
+.swrow input[type=checkbox]:checked { background: var(--accent-strong); }
+.swrow input[type=checkbox]:checked::after { transform: translateX(18px); }
+.swrow input[type=checkbox]:disabled { opacity: .6; }
+.part .swrow { margin: 6px 0; padding: 6px 12px; font-size: .88rem; }
+.badge.experiential { color: var(--accent-strong); }
+.blk.experiential { outline: 2px dotted var(--accent); outline-offset: -3px; }
+.chours { display: grid; gap: 8px; margin-top: 10px; }
+.chrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-left: 5px solid var(--accent); border-radius: var(--radius-sm); background: var(--field); }
+.chrow .grow { display: grid; gap: 2px; }

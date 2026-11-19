@@ -9,16 +9,19 @@ export function AddSubjectForm({ semester, userId, onDone, onCancel }) {
   const [name, setName] = useState('')
   const [colour, setColour] = useState(PALETTE[0])
   const [pct, setPct] = useState(75)
+  const [credits, setCredits] = useState(4)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function save() {
     const n = name.trim().replace(/\s+/g, ' ')
     const p = Number(pct)
+    const cr = Number(credits)
     if (!n) { setErr('Enter a subject name.'); return }
+    if (!Number.isInteger(cr) || cr < 1 || cr > 10) { setErr('Credits must be a whole number from 1 to 10.'); return }
     if (!(p >= 1 && p <= 100)) { setErr('Required % must be between 1 and 100.'); return }
     setBusy(true); setErr('')
-    const r = await supabase.from('subjects').insert({ user_id: userId, semester_id: semester.id, name: n, colour, required_pct: p })
+    const r = await supabase.from('subjects').insert({ user_id: userId, semester_id: semester.id, name: n, colour, required_pct: p, ...(cr === 4 ? {} : { credits: cr }) })
     if (r.error) {
       setErr(r.error.code === '23505' ? 'A subject with this name already exists.' : r.error.message)
       setBusy(false)
@@ -34,6 +37,7 @@ export function AddSubjectForm({ semester, userId, onDone, onCancel }) {
       <div className="formgrid">
         <label>Subject name<input type="text" value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label>Required %<input type="number" min="1" max="100" value={pct} onChange={(e) => setPct(e.target.value)} /></label>
+        <label>Credits ({(Number(credits) || 0) * 15} hours)<input type="number" min="1" max="10" value={credits} onChange={(e) => setCredits(e.target.value)} /></label>
       </div>
       <p className="muted">Colour</p>
       <div className="chips">

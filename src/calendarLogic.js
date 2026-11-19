@@ -1,7 +1,10 @@
 import { hhmm } from './config.js'
 import { toMin } from './dateUtils.js'
 
-export const attOf = (row) => (Array.isArray(row.attendance) ? row.attendance[0] : row.attendance) || null
+// An experiential class counts as Present by itself (you do not have to attend it), whatever was marked before.
+export const attOf = (row) => (row.experiential
+  ? { status: 'present', reason: null, auto: true }
+  : (Array.isArray(row.attendance) ? row.attendance[0] : row.attendance) || null)
 
 export const isStarted = (date, start, now) =>
   date < now.date || (date === now.date && toMin(start) <= now.minutes)
@@ -28,7 +31,7 @@ export function toBlocks(rows) {
     }
     const b = map.get(key)
     b.ids.push(r.id); b.statuses.push(r.status)
-    b.list.push({ id: r.id, part: r.part, start, end, att: attOf(r) })
+    b.list.push({ id: r.id, part: r.part, start, end, att: attOf(r), exp: Boolean(r.experiential) })
     if (start < b.start) b.start = start
     if (end > b.end) b.end = end
   }
@@ -37,8 +40,9 @@ export function toBlocks(rows) {
   const merged = []
   for (const b of sorted) {
     const prev = merged[merged.length - 1]
+    const allExp = (x) => x.list.every((p) => p.exp)
     if (prev && prev.date === b.date && prev.subjectId === b.subjectId && prev.isExtra === b.isExtra
-      && prev.end === b.start && statusOf(prev.statuses) === statusOf(b.statuses)) {
+      && prev.end === b.start && statusOf(prev.statuses) === statusOf(b.statuses) && allExp(prev) === allExp(b)) {
       prev.ids.push(...b.ids); prev.statuses.push(...b.statuses); prev.list.push(...b.list)
       prev.end = b.end
     } else {
@@ -50,11 +54,13 @@ export function toBlocks(rows) {
     parts: b.list.length,
     list: b.list.sort((x, y) => x.start.localeCompare(y.start) || x.part - y.part),
     status: statusOf(b.statuses),
+    exp: b.list.length > 0 && b.list.every((p) => p.exp), // the whole class is experiential
   }))
 }
 
 export function blockState(b, now) {
   if (b.status !== 'scheduled') return b.status
+  if (b.exp) return 'experiential'
   const marked = b.list.filter((p) => p.att)
   if (marked.length === b.list.length) {
     if (marked.every((p) => p.att.status === 'present')) return 'present'
@@ -70,9 +76,9 @@ export function blockState(b, now) {
 
 export const STATE_LABEL = {
   upcoming: 'Upcoming', live: 'In progress', pending: 'Needs attendance', present: 'Present',
-  absent: 'Absent', partial: 'Partly marked', cancelled: 'Cancelled', holiday: 'Holiday',
+  absent: 'Absent', partial: 'Partly marked', cancelled: 'Cancelled', holiday: 'Holiday', experiential: 'Experiential',
 }
-export const STATE_BADGE = { present: '✓ Present', absent: '✗ Absent', partial: '◐ Partly', pending: '! Mark attendance' }
+export const STATE_BADGE = { present: '✓ Present', absent: '✗ Absent', partial: '◐ Partly', pending: '! Mark attendance', experiential: '★ Experiential' }
 
 // Side-by-side lanes for any classes that overlap in time on the same day.
 export function layout(blocks) {

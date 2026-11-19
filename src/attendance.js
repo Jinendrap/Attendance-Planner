@@ -34,8 +34,32 @@ async function send(userId, marks) {
   }
 }
 
+// Turn "experiential" on or off for sessions. Turning it on also clears any Present/Absent mark they had,
+// because an experiential class counts as attended by itself. Needs phase12_credits_experiential.sql.
+async function setExperiential(marks) {
+  for (const value of [true, false]) {
+    const ids = marks.filter((m) => m.experiential === value).map((m) => m.sessionId)
+    if (!ids.length) continue
+    const r = await supabase.from('sessions').update({ experiential: value }).in('id', ids)
+    if (r.error) {
+      const err = new Error(/experiential|column|schema/i.test(r.error.message || '')
+        ? 'Experiential classes are not set up yet. Run phase12_credits_experiential.sql in Supabase, then refresh.'
+        : 'Could not change that. Check your internet connection and try again.')
+      err.friendly = true
+      throw err
+    }
+    if (value) {
+      const d = await supabase.from('attendance').delete().in('session_id', ids)
+      if (d.error) throw d.error
+    }
+  }
+}
+
 // marks: [{ sessionId, status: 'present' | 'absent' | null (clear), reason }]
+//    or  [{ sessionId, experiential: true | false }]
 export async function markSessions(userId, marks) {
+  const exp = marks.filter((m) => typeof m.experiential === 'boolean')
+  if (exp.length) { await setExperiential(exp); return { queued: false } }
   try {
     await send(userId, marks)
     return { queued: false }
@@ -74,7 +98,7 @@ export async function fetchAllSessions(semesterId) {
   const out = []
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase.from('sessions')
-      .select('id, subject_id, status, session_date, start_time, end_time, attendance(status)')
+      .select('*, attendance(status)')
       .eq('semester_id', semesterId).order('session_date').order('start_time').order('id')
       .range(from, from + 999)
     if (error) throw error

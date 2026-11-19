@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from './supabaseClient.js'
 import { addDays, addMonths, mondayOf, monthGrid, fmt, toMin, nowIST } from './dateUtils.js'
-import { toBlocks, blockState, layout, isStarted, STATE_LABEL, STATE_BADGE } from './calendarLogic.js'
+import { toBlocks, blockState, layout, STATE_LABEL, STATE_BADGE } from './calendarLogic.js'
 import { withQueue } from './attendance.js'
 import AttendancePanel from './AttendancePanel.jsx'
-import RemarksPanel from './RemarksPanel.jsx'
+import { RemarksToggle } from './RemarksPanel.jsx'
 import ExtraClassForm from './ExtraClassForm.jsx'
 import useSwipe from './useSwipe.js'
 import useBackClose from './useBack.js'
@@ -47,7 +47,7 @@ function Blk({ b, st, top, h, onOpen }) {
         style={{ borderLeftColor: b.colour, background: `${b.colour}22` }}
         onClick={() => onOpen(b)}
       >
-        <strong>{b.subject}</strong>
+        <strong>{b.exp ? '★ ' : ''}{b.subject}</strong>
         <span className="tm">{b.start}–{b.end}</span>
         {(b.room || b.faculty) && <span className="rf">{[b.room, b.faculty].filter(Boolean).join(' · ')}</span>}
         {STATE_BADGE[st] && <span className={`badge ${st}`}>{STATE_BADGE[st]}</span>}
@@ -230,8 +230,8 @@ export default function CalendarView({ semester, onMark }) {
       const r = await onMark(marks)
       if (r.queued) setTick(tick + 1)
       else setReload(reload + 1)
-    } catch {
-      setError('Could not save attendance. Please try again.')
+    } catch (e) {
+      setError(e?.friendly ? e.message : 'Could not save attendance. Please try again.')
     }
   }
 
@@ -304,10 +304,9 @@ export default function CalendarView({ semester, onMark }) {
             <p>{fmt(open.date, { weekday: 'long', day: 'numeric', month: 'long' })}<br />{open.start}–{open.end}{open.parts > 1 ? ` · ${open.parts} sessions` : ''}</p>
             <p>Room: {open.room || '—'}<br />Faculty: {open.faculty || '—'}</p>
             <p><strong>{STATE_LABEL[openState]}</strong>{open.isExtra ? ' · Extra class' : ''}</p>
-            {open.status === 'scheduled' && <AttendancePanel key={open.key} list={open.list} onMark={mark} />}
-            {open.status === 'scheduled' && isStarted(open.date, open.start, now) && (
-              <RemarksPanel semesterId={semester.id} subjectId={open.subjectId} date={open.date} start={open.start} />
-            )}
+            {open.status === 'scheduled'
+              ? <AttendancePanel key={open.key} list={open.list} onMark={mark} remarks={{ semesterId: semester.id, subjectId: open.subjectId, date: open.date, start: open.start }} />
+              : <RemarksToggle key={open.key} semesterId={semester.id} subjectId={open.subjectId} date={open.date} start={open.start} />}
             <div className="row">
               {open.status === 'holiday'
                 ? <span className="muted">This day is a holiday. Change it under Leave &amp; holidays.</span>

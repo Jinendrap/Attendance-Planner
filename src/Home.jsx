@@ -5,6 +5,7 @@ import { nowIST, toMin } from './dateUtils.js'
 import { planResync } from './slotEdit.js'
 import { attOf } from './calendarLogic.js'
 import { AddSubjectForm, AddClassForm } from './AddForms.jsx'
+import HoursPanel from './HoursPanel.jsx'
 
 export default function Home({ semester, userId, onImport }) {
   const [subjects, setSubjects] = useState([])
@@ -40,6 +41,15 @@ export default function Home({ semester, userId, onImport }) {
     if (error) { setNote('Could not save the percentage.'); return }
     setSubjects(subjects.map((x) => (x.id === subject.id ? { ...x, required_pct: pct } : x)))
     setNote(`${subject.name}: required attendance set to ${pct}%.`)
+  }
+
+  async function saveCredits(subject, value) {
+    const credits = Number(value)
+    if (!Number.isInteger(credits) || credits < 1 || credits > 10 || credits === (subject.credits || 4)) return
+    const { error } = await supabase.from('subjects').update({ credits }).eq('id', subject.id)
+    if (error) { setNote('Could not save the credits. Run phase12_credits_experiential.sql in Supabase, then refresh.'); return }
+    setSubjects(subjects.map((x) => (x.id === subject.id ? { ...x, credits } : x)))
+    setNote(`${subject.name}: ${credits} credits = ${credits * 15} hours.`)
   }
 
   const done = (message) => { setAdding(null); setNote(message); setReload((r) => r + 1) }
@@ -173,13 +183,19 @@ export default function Home({ semester, userId, onImport }) {
           {subjects.map((s) => (
             <div className="subject" key={s.id} style={{ borderLeftColor: s.colour }}>
               <div className="row spread nomargin"><strong>{s.name}</strong><button className="secondary small danger" onClick={() => deleteSubject(s)}>Delete</button></div>
-              <label>Required %
-                <input type="number" min="1" max="100" defaultValue={s.required_pct} onBlur={(e) => savePct(s, e.target.value)} />
-              </label>
+              <div className="formgrid">
+                <label>Required %
+                  <input type="number" min="1" max="100" defaultValue={s.required_pct} onBlur={(e) => savePct(s, e.target.value)} />
+                </label>
+                <label>Credits ({(s.credits || 4) * 15} h)
+                  <input type="number" min="1" max="10" defaultValue={s.credits || 4} onBlur={(e) => saveCredits(s, e.target.value)} />
+                </label>
+              </div>
             </div>
           ))}
         </div>
       </section>
+      <HoursPanel semester={semester} subjects={subjects} version={reload + count} onChanged={() => setReload((r) => r + 1)} />
       <section className="panel">
         <div className="row spread">
           <h3 style={{ margin: 0 }}>Weekly timetable</h3>

@@ -35,7 +35,7 @@ async function absentSessions(semesterId) {
   return out
 }
 
-const statusText = (r) => { const a = attOf(r); return a ? (a.status === 'present' ? 'Present' : 'Absent') : 'Not marked' }
+const statusText = (r) => { if (r.experiential) return 'Experiential (counted present)'; const a = attOf(r); return a ? (a.status === 'present' ? 'Present' : 'Absent') : 'Not marked' }
 
 export default function ExportPanel({ semester }) {
   const [busy, setBusy] = useState('')
