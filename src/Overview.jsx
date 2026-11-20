@@ -155,8 +155,8 @@ export default function Overview({ semester, version, pendingCount, onGo, onMark
                 <span><strong>{b.subject}</strong><br /><span className="muted small-text">{[b.room, b.faculty].filter(Boolean).join(' · ') || '—'}</span></span>
                 <span className={`badge ${st}`}>{STATE_LABEL[st]}</span>
                 <div className="actions">
-                  <button className={marked ? 'secondary small' : 'small'} onClick={() => setAttOpen(attOpen === b.key ? null : b.key)}>
-                    {attOpen === b.key ? 'Hide attendance' : marked ? 'Change attendance' : 'Mark attendance'}
+                  <button className={marked || b.exp ? 'secondary small' : 'small'} onClick={() => setAttOpen(attOpen === b.key ? null : b.key)}>
+                    {attOpen === b.key ? 'Hide' : b.exp ? 'Experiential · no marking needed' : marked ? 'Change attendance' : 'Mark attendance'}
                   </button>
                   <button className="secondary small" onClick={() => setOpen(open === b.key ? null : b.key)}>{open === b.key ? 'Hide remarks' : 'Remarks'}</button>
                 </div>

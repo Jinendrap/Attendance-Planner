@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
   // Scheduled run: find classes starting soon.
   const now = nowIST()
   const { data: rows, error } = await admin.from('sessions')
-    .select('id, user_id, google_event_id, start_time, end_time, room, reminder_sent_at, subjects(name), attendance(status)')
+    .select('id, user_id, google_event_id, start_time, end_time, room, reminder_sent_at, experiential, subjects(name), attendance(status)')
     .eq('status', 'scheduled').eq('session_date', now.date)
   if (error) return json({ error: error.message }, 500)
 
@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
     const diff = start - now.minutes
     if (diff > MINUTES_BEFORE || diff < -LATE_GRACE) continue
 
-    const unmarked = list.filter((r) => !(Array.isArray(r.attendance) ? r.attendance.length : r.attendance))
+    // Experiential classes need no attendance, so they get no reminder.
+    const unmarked = list.filter((r) => !r.experiential && !(Array.isArray(r.attendance) ? r.attendance.length : r.attendance))
     const first = list[0]
     const ids = list.map((r) => r.id)
     if (unmarked.length) {
