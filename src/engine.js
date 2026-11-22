@@ -5,6 +5,7 @@
 //  - Percentage    = A / T, never rounded up (74.999 stays below 75).
 //  - All checks use whole numbers (A*100 vs r*T), so there are no decimal errors.
 import { attOf, hasStarted } from './calendarLogic.js'
+import { hoursFor } from './hoursLogic.js'
 
 export function summarize(A, T, r) {
   if (T === 0) return { A, T, absent: 0, pct: null, required: r, state: 'none', canMiss: null, mustAttend: null }
@@ -74,7 +75,21 @@ export function simulateLeave(subjects, sessions, range, assume, overallRequired
   const first = ranges.reduce((m, r) => (r.from < m ? r.from : m), '9999-99-99')
   const inLeave = (d) => ranges.some((r) => d >= r.from && d <= r.to)
   const per = new Map(subjects.map((s) => [s.id, { A: 0, T: 0, F: 0, L: 0, X: 0, R: 0 }]))
+  // Course hours cap: each subject has credits x 15 hours. Earliest classes are kept, later unmarked ones above the
+  // limit are ignored (same rule as the course-hours clean-up). Marked classes are never dropped.
+  const extra = new Map(), have = new Map()
+  const ignored = new Set()
+  for (const sub of subjects) {
+    const mine = sessions.filter((s) => s.subject_id === sub.id && s.status === 'scheduled')
+      .sort((a, b) => a.session_date.localeCompare(b.session_date) || String(a.start_time).localeCompare(String(b.start_time)) || (a.part || 0) - (b.part || 0))
+    const allowed = hoursFor(sub.credits)
+    have.set(sub.id, mine.length)
+    let n = 0
+    for (const s of mine.slice(allowed)) if (!attOf(s)) { ignored.add(s); n += 1 }
+    extra.set(sub.id, n)
+  }
   for (const s of sessions) {
+    if (ignored.has(s)) continue
     const c = per.get(s.subject_id)
     if (!c || s.status !== 'scheduled') continue
     const att = attOf(s)
@@ -94,7 +109,7 @@ export function simulateLeave(subjects, sessions, range, assume, overallRequired
     const left = c.R + (assume ? 0 : c.F)
     tot.A += c.A; tot.T += c.T; tot.A2 += A2; tot.T2 += T2; tot.lost += c.L; tot.left += left
     const after = summarize(A2, T2, s.required_pct)
-    return { subject: s, lost: c.L, left, now: summarize(c.A, c.T, s.required_pct), after, verdict: judge(after, left) }
+    return { subject: s, lost: c.L, left, hours: { allowed: hoursFor(s.credits), ignored: extra.get(s.id) || 0, missing: Math.max(0, hoursFor(s.credits) - (have.get(s.id) || 0)) }, now: summarize(c.A, c.T, s.required_pct), after, verdict: judge(after, left) }
   }).sort((a, b) => b.lost - a.lost || a.subject.name.localeCompare(b.subject.name))
   const afterAll = summarize(tot.A2, tot.T2, overallRequired)
   return {

@@ -50,7 +50,7 @@ function headline(result) {
 
 function Stat({ label, value }) { return <div className="stat"><span>{label}</span><strong>{value}</strong></div> }
 
-function VerdictCard({ name, colour, lost, left, now, after, required, verdict, total }) {
+function VerdictCard({ name, colour, lost, left, now, after, required, verdict, total, hours }) {
   return (
     <div className={`vcard${total ? ' total' : ''}`}>
       <div className="vhead">
@@ -66,6 +66,8 @@ function VerdictCard({ name, colour, lost, left, now, after, required, verdict, 
         <Stat label="Right after" value={VERDICT[after.state]} />
       </div>
       <p className="vadvice">{advice(verdict)}</p>
+      {hours && hours.ignored > 0 && <p className="muted small-text">{classes(hours.ignored)} above the {hours.allowed}-hour course limit {hours.ignored === 1 ? 'is' : 'are'} ignored.</p>}
+      {hours && hours.missing > 0 && <p className="muted small-text">The calendar has {hours.missing} fewer {hours.missing === 1 ? 'class' : 'classes'} than the {hours.allowed} course hours. {hours.missing === 1 ? 'It is' : 'They are'} not counted.</p>}
     </div>
   )
 }
@@ -98,11 +100,11 @@ function ResultView({ result, semester, ranges, sessions, subjects, assume, mixe
       <div className="vgrid">
         <VerdictCard total name="Overall" lost={result.overall.lost} left={result.overall.left} now={result.overall.now} after={result.overall.after} required={semester.overall_required_pct} verdict={result.overall.verdict} />
         {result.rows.map((r) => (
-          <VerdictCard key={r.subject.id} name={r.subject.name} colour={r.subject.colour} lost={r.lost} left={r.left} now={r.now} after={r.after} required={r.subject.required_pct} verdict={r.verdict} />
+          <VerdictCard key={r.subject.id} name={r.subject.name} colour={r.subject.colour} lost={r.lost} left={r.left} now={r.now} after={r.after} required={r.subject.required_pct} verdict={r.verdict} hours={r.hours} />
         ))}
       </div>
       <p className="muted small-text">
-        “Left after” counts the unmarked classes you can still attend once the leave starts. Holidays and cancelled classes are not counted.
+        “Left after” counts the unmarked classes you can still attend once the leave starts. Holidays, cancelled classes and classes above each subject’s course hours (credits × 15) are not counted.
         {!assume && ' Unmarked classes before the leave are included, because you chose not to assume them.'}
         {mixed && ' Plans with different “assume” settings are treated as not assuming.'}
       </p>
