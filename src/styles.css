@@ -632,3 +632,28 @@ input, select, textarea { transition: border-color .35s var(--ease), background-
 .chours { display: grid; gap: 8px; margin-top: 10px; }
 .chrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-left: 5px solid var(--accent); border-radius: var(--radius-sm); background: var(--field); }
 .chrow .grow { display: grid; gap: 2px; }
+
+/* ---------- Leave planner: cards instead of tables (no sideways scrolling) ---------- */
+.headline { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--pill-ok); color: var(--ok); line-height: 1.45; overflow-wrap: anywhere; }
+.headline.edge { background: var(--pill-warn); color: var(--warn); }
+.headline.below { background: var(--pill-bad); color: var(--danger); }
+.headline span { color: var(--ink); font-size: .92rem; }
+.vgrid, .plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 10px; margin-top: 12px; }
+.vcard, .plan { min-width: 0; padding: 14px; border-radius: var(--radius-sm); background: var(--paper); border: 1px solid var(--line); display: grid; gap: 10px; align-content: start; }
+.vcard.total { background: var(--accent-soft); border-color: transparent; }
+:root[data-theme="dark"] .vcard.total { background: var(--accent-soft); }
+.plan.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.vhead, .plantop { display: flex; gap: 10px; align-items: center; justify-content: space-between; min-width: 0; }
+.vname { font-weight: 600; min-width: 0; overflow-wrap: anywhere; display: flex; align-items: center; }
+.vname .dot { flex: none; }
+.plantop { cursor: pointer; align-items: flex-start; }
+.plantop input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
+.plantop .grow { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
+.stat span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.stat strong { font-size: .95rem; font-weight: 600; overflow-wrap: anywhere; }
+.vadvice { margin: 0; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+.pill.recover { background: var(--pill-warn); color: var(--warn); }
+.vhead .pill, .plantop .pill { flex: none; }
+@media (max-width: 380px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

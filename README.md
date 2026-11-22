@@ -28,7 +28,7 @@ Anyone can sign in with Google and gets their own private planner.
 - One-way, read-only import of a Google Calendar timetable (no duplicates), or add classes by hand
 - Present / absent marking, with a Pending list for missed classes
 - Subject-wise attendance dashboard (percentage, classes you can still miss)
-- Leave simulator that uses the real classes on the chosen dates
+- Leave simulator that uses the real classes on the chosen dates, says whether enough classes are left to recover, and can combine several saved plans
 - Class remarks (written any time, opened with a Remarks button), tasks and deadlines, CSV export
 - Experiential classes: a switch per class or per session; they count as Present automatically
 - Course hours: credits per subject (4 credits = 60 hours) and a one-tap clean-up of classes above the limit

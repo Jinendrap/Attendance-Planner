@@ -53,10 +53,27 @@ export function buildDashboard(subjects, sessions, overallRequired, now) {
 //  - Real marks (present/absent) stay exactly as they are.
 //  - Unmarked classes inside the leave dates are counted as missed (lost).
 //  - Holiday and cancelled classes are never counted.
-//  - If `assume` is true, every other unmarked class before the leave starts is assumed attended.
+//  - If `assume` is true, every other unmarked class before the (first) leave starts is assumed attended.
 //  - Experiential classes are attended automatically, so a leave never loses them.
+//  - `range` is one { from, to } or a list of them (several plans taken together; overlaps count once).
+//  - "left" = unmarked classes you can still attend outside the leave dates (after the first leave starts,
+//    plus the ones before it when you did not assume them). Judgement: attend `mustAttend` of the `left`.
+export function judge(after, left) {
+  if (after.state === 'none') return { kind: 'none', left, need: 0, spare: left, best: null }
+  const best = summarize(after.A + left, after.T + left, after.required)
+  if (after.state === 'below') {
+    const need = after.mustAttend
+    if (need !== null && need <= left) return { kind: 'recover', left, need, spare: left - need, best: best.pct }
+    return { kind: 'fail', left, need, spare: 0, best: best.pct }
+  }
+  return { kind: after.state === 'edge' ? 'edge' : 'safe', left, need: 0, spare: Math.min(after.canMiss, left), best: best.pct }
+}
+
 export function simulateLeave(subjects, sessions, range, assume, overallRequired, now = null) {
-  const per = new Map(subjects.map((s) => [s.id, { A: 0, T: 0, F: 0, L: 0, X: 0 }]))
+  const ranges = (Array.isArray(range) ? range : [range]).filter((r) => r && r.from && r.to)
+  const first = ranges.reduce((m, r) => (r.from < m ? r.from : m), '9999-99-99')
+  const inLeave = (d) => ranges.some((r) => d >= r.from && d <= r.to)
+  const per = new Map(subjects.map((s) => [s.id, { A: 0, T: 0, F: 0, L: 0, X: 0, R: 0 }]))
   for (const s of sessions) {
     const c = per.get(s.subject_id)
     if (!c || s.status !== 'scheduled') continue
@@ -65,19 +82,23 @@ export function simulateLeave(subjects, sessions, range, assume, overallRequired
       if (s.experiential && now && !hasStarted({ session_date: s.session_date, start_time: s.start_time }, now)) { c.X += 1; continue }
       c.T += 1; if (att.status === 'present') c.A += 1; continue
     }
-    if (s.session_date >= range.from && s.session_date <= range.to) c.L += 1
-    else if (s.session_date < range.from) c.F += 1
+    if (inLeave(s.session_date)) c.L += 1
+    else if (s.session_date < first) c.F += 1
+    else c.R += 1
   }
-  const tot = { A: 0, T: 0, A2: 0, T2: 0, lost: 0 }
+  const tot = { A: 0, T: 0, A2: 0, T2: 0, lost: 0, left: 0 }
   const rows = subjects.map((s) => {
     const c = per.get(s.id)
     const A2 = c.A + (assume ? c.F : 0) + c.X
     const T2 = c.T + (assume ? c.F : 0) + c.L + c.X
-    tot.A += c.A; tot.T += c.T; tot.A2 += A2; tot.T2 += T2; tot.lost += c.L
-    return { subject: s, lost: c.L, now: summarize(c.A, c.T, s.required_pct), after: summarize(A2, T2, s.required_pct) }
+    const left = c.R + (assume ? 0 : c.F)
+    tot.A += c.A; tot.T += c.T; tot.A2 += A2; tot.T2 += T2; tot.lost += c.L; tot.left += left
+    const after = summarize(A2, T2, s.required_pct)
+    return { subject: s, lost: c.L, left, now: summarize(c.A, c.T, s.required_pct), after, verdict: judge(after, left) }
   }).sort((a, b) => b.lost - a.lost || a.subject.name.localeCompare(b.subject.name))
+  const afterAll = summarize(tot.A2, tot.T2, overallRequired)
   return {
     rows,
-    overall: { lost: tot.lost, now: summarize(tot.A, tot.T, overallRequired), after: summarize(tot.A2, tot.T2, overallRequired) },
+    overall: { lost: tot.lost, left: tot.left, now: summarize(tot.A, tot.T, overallRequired), after: afterAll, verdict: judge(afterAll, tot.left) },
   }
 }
