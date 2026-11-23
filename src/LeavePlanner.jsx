@@ -8,24 +8,21 @@ import { hhmm } from './config.js'
 import { syncHolidays, releaseHolidayRange } from './holidays.js'
 
 const TYPE_LABEL = { official: 'Official holiday', personal: 'Personal holiday', vacation: 'Vacation' }
-const VERDICT = { safe: 'Safe', edge: 'On the limit', below: 'Below required', none: '—' }
-const pct = (p) => (p === null ? '—' : `${p.toFixed(2)}%`)
+const pct = (p) => (p === null ? '—' : `${Math.round(p * 10) / 10}%`)
 const short = (d) => fmt(d, { day: 'numeric', month: 'short' })
 const classes = (n) => `${n} ${n === 1 ? 'class' : 'classes'}`
 
-// What the person should do after the leave, in plain words.
-function advice(v) {
-  if (v.kind === 'none') return v.left ? `${classes(v.left)} left. Nothing is counted yet.` : 'Nothing is counted yet.'
-  if (v.kind === 'recover') return `Recoverable: attend ${v.need} of the ${v.left} left${v.spare ? ` (${v.spare} spare)` : ' (no spare)'}.`
-  if (v.kind === 'fail') return v.left === 0
-    ? 'Not recoverable: no classes are left to attend.'
-    : v.need === null ? `Not recoverable: even attending all ${v.left} left would not reach the requirement.`
-      : `Not recoverable: you need ${v.need} but only ${v.left} are left. Best possible: ${pct(v.best)}.`
-  if (v.kind === 'edge') return v.left === 0 ? 'No classes left, and you stay on the requirement.' : `On the limit: you cannot miss any of the ${v.left} left.`
-  return v.left === 0 ? 'No classes left, and you stay above the requirement.' : `Safe: you can still skip ${v.spare} of the ${v.left} left.`
+// One short line: what to do after the leave.
+function tip(v) {
+  if (v.kind === 'none') return v.left ? `${classes(v.left)} left, nothing counted yet` : 'Nothing counted yet'
+  if (v.kind === 'recover') return `Attend ${v.need} of the ${v.left} left${v.spare ? ` · ${v.spare} spare` : ' · none spare'}`
+  if (v.kind === 'fail') return v.left === 0 ? 'No classes left to recover' : v.need === null ? `Cannot reach it, even attending all ${v.left}` : `Needs ${v.need}, only ${v.left} left · best ${pct(v.best)}`
+  if (v.kind === 'edge') return v.left === 0 ? 'On the requirement, nothing left' : `Cannot skip any of the ${v.left} left`
+  return v.left === 0 ? 'Above the requirement, nothing left' : `Can skip ${v.spare} of the ${v.left} left`
 }
 const TONE = { safe: 'safe', edge: 'edge', recover: 'edge', fail: 'below', none: 'none' }
-const TAG = { safe: 'Safe', edge: 'On the limit', recover: 'Recoverable', fail: 'Not recoverable', none: '—' }
+const TAG = { safe: 'Safe', edge: 'Tight', recover: 'Recoverable', fail: 'Not recoverable', none: '—' }
+const RANK = { fail: 0, recover: 1, edge: 2, safe: 3, none: 4 }
 
 function headline(result) {
   const all = [...result.rows.filter((r) => r.after.state !== 'none').map((r) => r.verdict), result.overall.verdict]
@@ -33,47 +30,42 @@ function headline(result) {
   const byLeave = failed.filter((r) => r.lost > 0)
   const already = failed.filter((r) => r.lost === 0)
   const dips = result.rows.filter((r) => r.verdict.kind === 'recover')
-  const names = (l) => l.map((r) => r.subject.name).join(', ')
-  const note = already.length ? ` ${names(already)} ${already.length === 1 ? 'is' : 'are'} short already and cannot be brought back with the classes left, with or without this leave.` : ''
+  const who = (l) => (l.length <= 2 ? l.map((r) => r.subject.name).join(' and ') : `${l.length} subjects`)
+  const note = already.length ? ` ${who(already)} ${already.length === 1 ? 'is' : 'are'} short already and cannot be recovered, with or without this leave.` : ''
   const overallFail = result.overall.verdict.kind === 'fail'
   if (byLeave.length || (overallFail && !already.length)) {
-    return { tone: 'below', title: 'No, not safely.', body: `${byLeave.length ? names(byLeave) : 'Your overall attendance'} could not reach the requirement even if you attended every class that is left.${note}` }
+    return { tone: 'below', title: 'No, not safely', body: `${byLeave.length ? who(byLeave) : 'Overall attendance'} cannot reach the requirement even if you attend every class left.${note}` }
   }
   if (all.every((v) => v.kind === 'safe' || v.kind === 'edge' || v.kind === 'none')) {
-    return { tone: 'safe', title: 'Yes, you can take this leave.', body: 'Every subject and your overall attendance stay at or above the requirement right after it.' }
+    return { tone: 'safe', title: 'Yes, go ahead', body: 'Everything stays at or above the requirement right after the leave.' }
   }
   if (dips.length || overallFail) {
-    return { tone: 'edge', title: 'Yes, but you will have to catch up.', body: `${dips.length ? names(dips) : 'Your overall attendance'} would dip below the requirement, but enough classes are left to bring it back. Attend the number shown on each card.${note}` }
+    return { tone: 'edge', title: 'Yes, but you must catch up', body: `${dips.length ? who(dips) : 'Overall attendance'} dip${dips.length === 1 ? 's' : ''} below the requirement after the leave. ${dips.length > 1 ? 'All can' : 'It can'} recover with the classes left.${note}` }
   }
-  return { tone: 'edge', title: result.overall.lost ? 'The leave itself is fine.' : 'This leave costs you no classes.', body: note.trim() }
+  return { tone: 'edge', title: result.overall.lost ? 'The leave itself is fine' : 'This leave costs no classes', body: note.trim() }
 }
 
-function Stat({ label, value }) { return <div className="stat"><span>{label}</span><strong>{value}</strong></div> }
-
-function VerdictCard({ name, colour, lost, left, now, after, required, verdict, total, hours }) {
+function Row({ name, colour, lost, left, now, after, required, verdict, total, hours }) {
+  const tone = TONE[verdict.kind]
   return (
-    <div className={`vcard${total ? ' total' : ''}`}>
+    <div className={`vrow${total ? ' total' : ''}`}>
       <div className="vhead">
         <span className="vname">{colour && <span className="dot" style={{ background: colour }} />}{name}</span>
-        <span className={`pill ${TONE[verdict.kind]}`}>{TAG[verdict.kind]}</span>
+        <span className={`pill ${tone}`}>{TAG[verdict.kind]}</span>
       </div>
-      <div className="stats">
-        <Stat label="Lost" value={lost} />
-        <Stat label="Left after" value={left} />
-        <Stat label="Now" value={pct(now.pct)} />
-        <Stat label="After leave" value={pct(after.pct)} />
-        <Stat label="Required" value={`${required}%`} />
-        <Stat label="Right after" value={VERDICT[after.state]} />
+      <div className="bar" aria-hidden="true"><i className={tone} style={{ width: `${Math.max(0, Math.min(100, after.pct || 0))}%` }} /><b style={{ left: `${Math.min(100, required)}%` }} /></div>
+      <div className="vmeta">
+        <span>{pct(now.pct)} → <strong>{pct(after.pct)}</strong> <em>of {required}%</em></span>
+        <span>−{lost} · {left} left</span>
       </div>
-      <p className="vadvice">{advice(verdict)}</p>
-      {hours && hours.ignored > 0 && <p className="muted small-text">{classes(hours.ignored)} above the {hours.allowed}-hour course limit {hours.ignored === 1 ? 'is' : 'are'} ignored.</p>}
-      {hours && hours.missing > 0 && <p className="muted small-text">The calendar has {hours.missing} fewer {hours.missing === 1 ? 'class' : 'classes'} than the {hours.allowed} course hours. {hours.missing === 1 ? 'It is' : 'They are'} not counted.</p>}
+      <p className="vadvice">{tip(verdict)}</p>
     </div>
   )
 }
 
 function ResultView({ result, semester, ranges, sessions, subjects, assume, mixed }) {
   const head = headline(result)
+  const rows = useMemo(() => [...result.rows].sort((a, b) => RANK[a.verdict.kind] - RANK[b.verdict.kind] || b.lost - a.lost), [result])
   const lostByDay = useMemo(() => {
     const names = new Map(subjects.map((s) => [s.id, s]))
     const inLeave = (d) => ranges.some((r) => d >= r.from && d <= r.to)
@@ -92,30 +84,38 @@ function ResultView({ result, semester, ranges, sessions, subjects, assume, mixe
 
   return (
     <>
-      <h3>{result.overall.lost === 0 ? 'No classes fall on these dates' : `${result.overall.lost} sessions would be missed`}</h3>
       <div className={`headline ${head.tone}`}>
         <strong>{head.title}</strong>
-        <span>{head.body}</span>
+        {head.body && <span>{head.body}</span>}
       </div>
-      <div className="vgrid">
-        <VerdictCard total name="Overall" lost={result.overall.lost} left={result.overall.left} now={result.overall.now} after={result.overall.after} required={semester.overall_required_pct} verdict={result.overall.verdict} />
-        {result.rows.map((r) => (
-          <VerdictCard key={r.subject.id} name={r.subject.name} colour={r.subject.colour} lost={r.lost} left={r.left} now={r.now} after={r.after} required={r.subject.required_pct} verdict={r.verdict} hours={r.hours} />
+      <div className="vlist">
+        <Row total name={`Overall · ${result.overall.lost} missed`} lost={result.overall.lost} left={result.overall.left} now={result.overall.now} after={result.overall.after} required={semester.overall_required_pct} verdict={result.overall.verdict} />
+        {rows.map((r) => (
+          <Row key={r.subject.id} name={r.subject.name} colour={r.subject.colour} lost={r.lost} left={r.left} now={r.now} after={r.after} required={r.subject.required_pct} verdict={r.verdict} hours={r.hours} />
         ))}
       </div>
-      <p className="muted small-text">
-        “Left after” counts the unmarked classes you can still attend once the leave starts. Holidays, cancelled classes and classes above each subject’s course hours (credits × 15) are not counted.
-        {!assume && ' Unmarked classes before the leave are included, because you chose not to assume them.'}
-        {mixed && ' Plans with different “assume” settings are treated as not assuming.'}
-      </p>
       {lostByDay.length > 0 && (
-        <>
-          <h4>Classes you would miss</h4>
+        <details className="more">
+          <summary>Classes you would miss ({result.overall.lost})</summary>
           {lostByDay.map(([d, list]) => (
-            <p key={d} className="daylost"><strong>{fmt(d, { weekday: 'short', day: 'numeric', month: 'short' })}:</strong> {list.map((e) => `${e.name} ${e.start}–${e.end}${e.n > 1 ? ` (${e.n} sessions)` : ''}`).join(' · ')}</p>
+            <p key={d} className="daylost"><strong>{fmt(d, { weekday: 'short', day: 'numeric', month: 'short' })}</strong><br />{list.map((e) => `${e.name} ${e.start}–${e.end}${e.n > 1 ? ` ×${e.n}` : ''}`).join(' · ')}</p>
           ))}
-        </>
+        </details>
       )}
+      <details className="more">
+        <summary>How this is worked out</summary>
+        <p className="muted small-text">
+          Bar = attendance after the leave, the line is the requirement. “Left” is the number of unmarked classes you can still attend once the leave starts.
+          Holidays, cancelled classes and classes above each subject’s course hours (credits × 15) are not counted.
+          {!assume && ' Unmarked classes before the leave are included, because you chose not to assume them.'}
+          {mixed && ' Plans with different “assume” settings are treated as not assuming.'}
+        </p>
+        {rows.filter((r) => r.hours.ignored > 0 || r.hours.missing > 0).map((r) => (
+          <p key={r.subject.id} className="muted small-text">
+            <strong>{r.subject.name}:</strong>{r.hours.ignored > 0 ? ` ${classes(r.hours.ignored)} above the ${r.hours.allowed}-hour limit ignored.` : ''}{r.hours.missing > 0 ? ` ${r.hours.missing} of ${r.hours.allowed} course hours not in the calendar.` : ''}
+          </p>
+        ))}
+      </details>
     </>
   )
 }
@@ -254,18 +254,12 @@ export default function LeavePlanner({ semester, userId, version }) {
                 <div key={p.id} className={`plan${on ? ' on' : ''}`}>
                   <label className="plantop">
                     <input type="checkbox" checked={on} onChange={() => toggle(p.id)} />
-                    <span className="grow"><strong>{p.name}</strong><span className="muted small-text">{short(p.from_date)} – {short(p.to_date)}</span></span>
+                    <span className="grow"><strong>{p.name}</strong><span className="muted small-text">{short(p.from_date)} – {short(p.to_date)} · {p.res.overall.lost} missed · {pct(p.res.overall.after.pct)} overall{bad ? ` · ${bad} below` : ''}</span></span>
                     <span className={`pill ${stuck ? 'below' : bad || v.kind === 'recover' ? 'edge' : 'safe'}`}>{stuck ? 'Not recoverable' : bad || v.kind === 'recover' ? 'Recoverable' : 'Safe'}</span>
                   </label>
-                  <div className="stats">
-                    <Stat label="Lost" value={p.res.overall.lost} />
-                    <Stat label="Overall after" value={pct(p.res.overall.after.pct)} />
-                    <Stat label="Subjects below" value={bad || 'None'} />
-                  </div>
-                  <p className="vadvice">{advice(v)}</p>
-                  <div className="row nomargin">
-                    <button className="secondary small" onClick={() => { setFrom(p.from_date); setTo(p.to_date); setAssume(p.assume_attend); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Open</button>
-                    <button className="secondary small danger" onClick={() => deletePlan(p)}>Delete</button>
+                  <div className="plantools">
+                    <button className="linkbtn" onClick={() => { setFrom(p.from_date); setTo(p.to_date); setAssume(p.assume_attend); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Open</button>
+                    <button className="linkbtn danger" onClick={() => deletePlan(p)}>Delete</button>
                   </div>
                 </div>
               )
@@ -278,7 +272,7 @@ export default function LeavePlanner({ semester, userId, version }) {
       {combo && (
         <section className="panel">
           <h2>Combined analysis</h2>
-          <p className="muted">{chosen.length} plans together: {chosen.map((p) => `${p.name} (${short(p.from_date)} – ${short(p.to_date)})`).join(', ')}.{overlap ? ' Some of these dates overlap, so shared days are counted once.' : ''}</p>
+          <p className="muted small-text">{chosen.map((p) => p.name).join(' + ')}{overlap ? '. Dates overlap, shared days are counted once.' : ''}</p>
           <ResultView result={combo} semester={semester} ranges={comboRanges} sessions={sessions} subjects={subjects} assume={comboAssume} mixed={comboMixed} />
         </section>
       )}

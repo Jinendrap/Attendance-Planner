@@ -633,27 +633,38 @@ input, select, textarea { transition: border-color .35s var(--ease), background-
 .chrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-left: 5px solid var(--accent); border-radius: var(--radius-sm); background: var(--field); }
 .chrow .grow { display: grid; gap: 2px; }
 
-/* ---------- Leave planner: cards instead of tables (no sideways scrolling) ---------- */
-.headline { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--pill-ok); color: var(--ok); line-height: 1.45; overflow-wrap: anywhere; }
+/* ---------- Leave planner: compact rows (no sideways scrolling) ---------- */
+.headline { display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--pill-ok); color: var(--ok); line-height: 1.4; overflow-wrap: anywhere; margin: 8px 0 4px; }
+.headline strong { font-size: 1.05rem; }
 .headline.edge { background: var(--pill-warn); color: var(--warn); }
 .headline.below { background: var(--pill-bad); color: var(--danger); }
-.headline span { color: var(--ink); font-size: .92rem; }
-.vgrid, .plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 10px; margin-top: 12px; }
-.vcard, .plan { min-width: 0; padding: 14px; border-radius: var(--radius-sm); background: var(--paper); border: 1px solid var(--line); display: grid; gap: 10px; align-content: start; }
-.vcard.total { background: var(--accent-soft); border-color: transparent; }
-:root[data-theme="dark"] .vcard.total { background: var(--accent-soft); }
-.plan.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
-.vhead, .plantop { display: flex; gap: 10px; align-items: center; justify-content: space-between; min-width: 0; }
-.vname { font-weight: 600; min-width: 0; overflow-wrap: anywhere; display: flex; align-items: center; }
+.headline span { color: var(--ink); font-size: .88rem; }
+.vlist { display: grid; grid-template-columns: 1fr; margin-top: 6px; }
+.vrow { min-width: 0; padding: 12px 2px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.vrow.total { border-top: 0; padding: 12px; border-radius: var(--radius-sm); background: var(--accent-soft); margin-bottom: 4px; }
+.vhead { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-width: 0; }
+.vname { font-weight: 600; font-size: .95rem; min-width: 0; overflow-wrap: anywhere; display: flex; align-items: center; }
 .vname .dot { flex: none; }
-.plantop { cursor: pointer; align-items: flex-start; }
-.plantop input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
-.plantop .grow { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
-.stat { display: grid; gap: 2px; min-width: 0; }
-.stat span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
-.stat strong { font-size: .95rem; font-weight: 600; overflow-wrap: anywhere; }
-.vadvice { margin: 0; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
-.pill.recover { background: var(--pill-warn); color: var(--warn); }
-.vhead .pill, .plantop .pill { flex: none; }
-@media (max-width: 380px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.vhead .pill { flex: none; font-size: .7rem; }
+.bar { position: relative; height: 6px; border-radius: 99px; background: var(--line); }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--muted); }
+.bar i.safe { background: var(--ok); } .bar i.edge { background: var(--warn); } .bar i.below { background: var(--danger); }
+.bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 2px; }
+.vmeta { display: flex; justify-content: space-between; gap: 8px; font-size: .8rem; color: var(--muted); }
+.vmeta strong { color: var(--ink); font-weight: 600; } .vmeta em { font-style: normal; }
+.vmeta span:last-child { white-space: nowrap; }
+.vadvice { margin: 0; font-size: .88rem; font-weight: 500; overflow-wrap: anywhere; }
+.more { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.more summary { cursor: pointer; font-size: .88rem; font-weight: 600; padding: 4px 0; }
+.more .daylost { margin: 6px 0; font-size: .84rem; overflow-wrap: anywhere; }
+.plans { display: grid; gap: 8px; margin-top: 10px; }
+.plan { min-width: 0; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); display: grid; gap: 6px; }
+.plan.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.plantop { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; min-width: 0; }
+.plantop input { margin-top: 2px; flex: none; width: 18px; height: 18px; }
+.plantop .grow { display: grid; gap: 2px; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.plantop .pill { flex: none; font-size: .7rem; }
+.plantools { display: flex; gap: 16px; padding-left: 28px; }
+.linkbtn { background: none; border: 0; padding: 2px 0; font: inherit; font-size: .85rem; font-weight: 600; color: var(--accent); cursor: pointer; box-shadow: none; min-height: 0; }
+.linkbtn.danger { color: var(--danger); }
+@media (min-width: 760px) { .vlist { grid-template-columns: 1fr 1fr; column-gap: 24px; } .vrow.total { grid-column: 1 / -1; } .plans { grid-template-columns: 1fr 1fr; } }
